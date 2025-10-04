@@ -63,11 +63,11 @@ CMAKE_BINARY_DIR = /Users/denniskritchko/Racoon_Works_Storm_Hacks2025/build
 # Directory level rules for the build root directory
 
 # The main recursive "all" target.
-all: CMakeFiles/algorithms.dir/all
+all: CMakeFiles/scheduler.dir/all
 .PHONY : all
 
 # The main recursive "codegen" target.
-codegen: CMakeFiles/algorithms.dir/codegen
+codegen: CMakeFiles/scheduler.dir/codegen
 .PHONY : codegen
 
 # The main recursive "preinstall" target.
@@ -75,40 +75,40 @@ preinstall:
 .PHONY : preinstall
 
 # The main recursive "clean" target.
-clean: CMakeFiles/algorithms.dir/clean
+clean: CMakeFiles/scheduler.dir/clean
 .PHONY : clean
 
 #=============================================================================
-# Target rules for target CMakeFiles/algorithms.dir
+# Target rules for target CMakeFiles/scheduler.dir
 
 # All Build rule for target.
-CMakeFiles/algorithms.dir/all:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/algorithms.dir/build.make CMakeFiles/algorithms.dir/depend
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/algorithms.dir/build.make CMakeFiles/algorithms.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/denniskritchko/Racoon_Works_Storm_Hacks2025/build/CMakeFiles --progress-num=1,2 "Built target algorithms"
-.PHONY : CMakeFiles/algorithms.dir/all
+CMakeFiles/scheduler.dir/all:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/scheduler.dir/build.make CMakeFiles/scheduler.dir/depend
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/scheduler.dir/build.make CMakeFiles/scheduler.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/denniskritchko/Racoon_Works_Storm_Hacks2025/build/CMakeFiles --progress-num=1,2,3,4 "Built target scheduler"
+.PHONY : CMakeFiles/scheduler.dir/all
 
 # Build rule for subdir invocation for target.
-CMakeFiles/algorithms.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /Users/denniskritchko/Racoon_Works_Storm_Hacks2025/build/CMakeFiles 2
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/algorithms.dir/all
+CMakeFiles/scheduler.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/denniskritchko/Racoon_Works_Storm_Hacks2025/build/CMakeFiles 4
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/scheduler.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /Users/denniskritchko/Racoon_Works_Storm_Hacks2025/build/CMakeFiles 0
-.PHONY : CMakeFiles/algorithms.dir/rule
+.PHONY : CMakeFiles/scheduler.dir/rule
 
 # Convenience name for target.
-algorithms: CMakeFiles/algorithms.dir/rule
-.PHONY : algorithms
+scheduler: CMakeFiles/scheduler.dir/rule
+.PHONY : scheduler
 
 # codegen rule for target.
-CMakeFiles/algorithms.dir/codegen:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/algorithms.dir/build.make CMakeFiles/algorithms.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/denniskritchko/Racoon_Works_Storm_Hacks2025/build/CMakeFiles --progress-num=1,2 "Finished codegen for target algorithms"
-.PHONY : CMakeFiles/algorithms.dir/codegen
+CMakeFiles/scheduler.dir/codegen:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/scheduler.dir/build.make CMakeFiles/scheduler.dir/codegen
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/denniskritchko/Racoon_Works_Storm_Hacks2025/build/CMakeFiles --progress-num=1,2,3,4 "Finished codegen for target scheduler"
+.PHONY : CMakeFiles/scheduler.dir/codegen
 
 # clean rule for target.
-CMakeFiles/algorithms.dir/clean:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/algorithms.dir/build.make CMakeFiles/algorithms.dir/clean
-.PHONY : CMakeFiles/algorithms.dir/clean
+CMakeFiles/scheduler.dir/clean:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/scheduler.dir/build.make CMakeFiles/scheduler.dir/clean
+.PHONY : CMakeFiles/scheduler.dir/clean
 
 #=============================================================================
 # Special targets to cleanup operation of make.
