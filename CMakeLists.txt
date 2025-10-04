@@ -20,18 +20,20 @@ endif()
 # Include directories
 include_directories(include)
 
-# Target: algorithms (main executable)
-add_executable(algorithms
+# Target: scheduler (main executable)
+add_executable(scheduler
   src/main.cpp
-  src/node.cpp
+  src/parser.cpp
   src/scheduler.cpp
+  src/node.cpp
 )
+target_include_directories(scheduler PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 # Warnings
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "AppleClang")
-  target_compile_options(algorithms PRIVATE -Wall -Wextra -Wpedantic)
+  target_compile_options(scheduler PRIVATE -Wall -Wextra -Wpedantic)
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-  target_compile_options(algorithms PRIVATE -Wall -Wextra -Wpedantic)
+  target_compile_options(scheduler PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 
 
