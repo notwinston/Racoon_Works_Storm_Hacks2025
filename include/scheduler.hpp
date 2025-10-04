@@ -14,6 +14,7 @@ ScheduleState scheduleWithLimits(const Problem& prob, size_t maxExpansions, doub
 ScheduleState greedySchedule(const Problem& prob);
 ScheduleState beamSearchSchedule(const Problem& prob, size_t beamWidth, size_t maxExpansions);
 ScheduleState heuristicSchedule(const Problem& prob);
+ScheduleState dpGreedySchedule(const Problem& prob, size_t lookaheadDepth, size_t branchFactor);
 
 struct DebugOptions {
     bool verbose{false};     // print high-level choices

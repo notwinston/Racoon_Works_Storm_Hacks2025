@@ -42,11 +42,12 @@ static std::vector<std::string> getReadyNodeNames(const Problem& prob, const Sch
     ready.reserve(prob.nodes.size());
     for (const auto& kv : prob.nodes) {
         const std::string& name = kv.first;
-        if (state.computed.count(name)) continue;
+        if (state.computed.count(name)) continue; // do not schedule original run again here
         const Node& n = kv.second;
         bool ok = true;
         for (const auto& inName : n.getInputs()) {
-            if (state.computed.count(inName) == 0) { ok = false; break; }
+            // Require the input output to be currently available in memory
+            if (state.output_memory.find(inName) == state.output_memory.end()) { ok = false; break; }
         }
         if (ok) ready.push_back(name);
     }
@@ -95,6 +96,9 @@ static ScheduleState executeNode(
     next.total_time += node.getTimeCost();
     next.output_memory[node.getName()] = node.getOutputMem();
     next.execution_order.push_back(node.getName());
+    // recompute flag: true if this node was already computed before and we are running again to restore its output
+    bool isRecompute = (state.computed.find(node.getName()) != state.computed.end());
+    next.recompute_flags.push_back(isRecompute);
     next.computed.insert(node.getName());
     return next;
 }
@@ -124,11 +128,107 @@ static std::vector<std::string> pruneReadyListDynamic(
     return pruned.empty() ? ready_names : pruned;
 }
 
+// Recompute candidates: nodes whose output is currently missing but needed by some uncomputed consumer,
+// and whose inputs are available in memory now. We allow recomputing even if they ran before.
+static std::vector<std::string> getRecomputeCandidates(const Problem& prob, const ScheduleState& state) {
+    std::vector<std::string> cands;
+    cands.reserve(prob.nodes.size());
+    for (const auto& kv : prob.nodes) {
+        const std::string& name = kv.first;
+        // Skip if output already available
+        if (state.output_memory.find(name) != state.output_memory.end()) continue;
+        // Must have at least one consumer not yet computed
+        auto itSucc = prob.successors.find(name);
+        bool needed = false;
+        if (itSucc != prob.successors.end()) {
+            for (const auto& cons : itSucc->second) {
+                if (state.computed.find(cons) == state.computed.end()) { needed = true; break; }
+            }
+        }
+        if (!needed) continue;
+        // Inputs for this node must be available to recompute now
+        const Node& n = kv.second;
+        bool inputsAvail = true;
+        for (const auto& inName : n.getInputs()) {
+            if (state.output_memory.find(inName) == state.output_memory.end()) { inputsAvail = false; break; }
+        }
+        if (!inputsAvail) continue;
+        cands.push_back(name);
+    }
+    return cands;
+}
+
+// Spill: remove the largest resident output to reduce current memory
+static bool trySpillLargest(ScheduleState& state) {
+    if (state.output_memory.empty()) return false;
+    auto it = std::max_element(state.output_memory.begin(), state.output_memory.end(),
+                               [](const auto& a, const auto& b){ return a.second < b.second; });
+    if (it == state.output_memory.end()) return false;
+    int sz = it->second;
+    state.output_memory.erase(it);
+    state.current_memory = std::max(0, state.current_memory - sz);
+    return true;
+}
+
+// Spill with heuristic: pick resident output maximizing (size / (recompute_time+1)) and with remaining consumers
+static bool trySpillBest(const Problem& prob, ScheduleState& state) {
+    std::string best; double bestScore = -1.0; int bestSize = 0;
+    for (const auto& kv : state.output_memory) {
+        const std::string& name = kv.first; int sz = kv.second;
+        auto itNode = prob.nodes.find(name); if (itNode == prob.nodes.end()) continue;
+        int t = std::max(1, itNode->second.getTimeCost());
+        // Count remaining consumers
+        int remaining = 0; auto itSucc = prob.successors.find(name);
+        if (itSucc != prob.successors.end()) {
+            for (const auto& cons : itSucc->second) if (state.computed.find(cons) == state.computed.end()) ++remaining;
+        }
+        if (remaining == 0) {
+            // Not needed anymore; just drop it for free
+            state.current_memory = std::max(0, state.current_memory - sz);
+            // defer erase until after loop to avoid iterator invalidation; mark by size 0
+            // But easier: erase now using a separate iterator pattern
+        }
+        double score = static_cast<double>(sz) / static_cast<double>(t);
+        if (score > bestScore) { bestScore = score; best = name; bestSize = sz; }
+    }
+    if (!best.empty()) {
+        state.output_memory.erase(best);
+        state.current_memory = std::max(0, state.current_memory - bestSize);
+        return true;
+    }
+    return false;
+}
+
+// Garbage-collect outputs that have no remaining consumers
+static void garbageCollectOutputs(const Problem& prob, ScheduleState& state) {
+    std::vector<std::string> toErase;
+    for (const auto& kv : state.output_memory) {
+        const std::string& name = kv.first;
+        auto itSucc = prob.successors.find(name);
+        bool needed = false;
+        if (itSucc != prob.successors.end()) {
+            for (const auto& cons : itSucc->second) {
+                if (state.computed.find(cons) == state.computed.end()) { needed = true; break; }
+            }
+        }
+        if (!needed) toErase.push_back(name);
+    }
+    for (const auto& name : toErase) {
+        auto it = state.output_memory.find(name);
+        if (it != state.output_memory.end()) {
+            state.current_memory = std::max(0, state.current_memory - it->second);
+            state.output_memory.erase(it);
+        }
+    }
+}
+
 static void dfsSchedule(const Problem& prob, ScheduleState& current, ScheduleState& best, bool& has_best) {
     if (current.computed.size() == prob.nodes.size()) {
         if (!has_best || isBetterSchedule(current, best, prob.total_memory)) { best = current; has_best = true; }
         return;
     }
+    // Opportunistic GC to tighten memory before expansion
+    garbageCollectOutputs(prob, current);
     auto ready = getReadyNodeNames(prob, current);
     if (ready.empty()) return;
     ready = pruneReadyListDynamic(ready, prob, current);
@@ -157,8 +257,26 @@ static void dfsScheduleLimited(const Problem& prob, ScheduleState& current, Sche
         return;
     }
     auto ready = getReadyNodeNames(prob, current);
-    if (ready.empty()) { if (stats) stats->deadEnds++; return; }
+    if (ready.empty()) {
+        // Consider recomputation of needed but spilled outputs
+        ready = getRecomputeCandidates(prob, current);
+        if (ready.empty()) { if (stats) stats->deadEnds++; return; }
+    }
     ready = pruneReadyListDynamic(ready, prob, current);
+    // If all candidates exceed memory, attempt a spill and retry once
+    bool allExceed = true;
+    for (const auto& nm : ready) {
+        const Node& node = prob.nodes.at(nm);
+        int predicted_peak = calculateSequentialPeak(current, node, current.current_memory);
+        if (predicted_peak <= prob.total_memory) { allExceed = false; break; }
+    }
+    if (allExceed) {
+        ScheduleState spilled = current;
+        if (trySpillBest(prob, spilled) || trySpillLargest(spilled)) {
+            dfsScheduleLimited(prob, spilled, best, has_best, expansionsLeft, deadline, dbg, stats);
+        }
+        return;
+    }
     for (const auto& nm : ready) {
         if (std::chrono::steady_clock::now() > deadline || expansionsLeft == 0) return;
         const Node& node = prob.nodes.at(nm);
@@ -286,6 +404,62 @@ ScheduleState beamSearchSchedule(const Problem& prob, size_t beamWidth, size_t m
         beam.swap(nextBeam);
     }
     return has_best ? best : (beam.empty() ? ScheduleState{} : beam.front());
+}
+
+// DP+Greedy: limited lookahead search selecting the best frontier by (feasible peak, time)
+ScheduleState dpGreedySchedule(const Problem& prob, size_t lookaheadDepth, size_t branchFactor) {
+    if (lookaheadDepth == 0) lookaheadDepth = 2; if (branchFactor == 0) branchFactor = 8;
+    ScheduleState cur;
+    while (cur.computed.size() < prob.nodes.size()) {
+        auto ready = getReadyNodeNames(prob, cur);
+        if (ready.empty()) break;
+        // Score candidates by exploring up to lookaheadDepth with branching
+        std::string bestName; int bestPeak = std::numeric_limits<int>::max(); int bestTime = std::numeric_limits<int>::max();
+        // Rank current ready by predicted peak/time, take top branchFactor to explore deeper
+        std::vector<std::pair<std::string, std::pair<int,int>>> cands;
+        for (const auto& nm : ready) {
+            const Node& node = prob.nodes.at(nm);
+            int p = calculateSequentialPeak(cur, node, cur.current_memory);
+            cands.push_back({nm, {p, node.getTimeCost()}});
+        }
+        std::sort(cands.begin(), cands.end(), [](const auto& a, const auto& b){
+            if (a.second.first != b.second.first) return a.second.first < b.second.first;
+            return a.second.second < b.second.second;
+        });
+        size_t explore = std::min(cands.size(), branchFactor);
+        auto evalPath = [&](const ScheduleState& start, const std::string& first)->std::pair<int,int>{
+            ScheduleState tmp = executeNode(first, prob, start);
+            size_t depth = 1;
+            while (depth < lookaheadDepth && tmp.computed.size() < prob.nodes.size()) {
+                auto r = getReadyNodeNames(prob, tmp);
+                if (r.empty()) break;
+                // greedy inside lookahead: pick candidate minimizing predicted peak then time
+                std::string pick; int bestP = std::numeric_limits<int>::max(); int bestT = std::numeric_limits<int>::max();
+                for (const auto& nm : r) {
+                    const Node& node = prob.nodes.at(nm);
+                    int p = calculateSequentialPeak(tmp, node, tmp.current_memory);
+                    int t = node.getTimeCost();
+                    if (p < bestP || (p == bestP && t < bestT)) { bestP = p; bestT = t; pick = nm; }
+                }
+                if (pick.empty()) break;
+                tmp = executeNode(pick, prob, tmp);
+                ++depth;
+            }
+            return {tmp.memory_peak, tmp.total_time};
+        };
+        for (size_t i = 0; i < explore; ++i) {
+            auto [p, t] = evalPath(cur, cands[i].first);
+            if (p <= prob.total_memory && (p < bestPeak || (p == bestPeak && t < bestTime))) {
+                bestPeak = p; bestTime = t; bestName = cands[i].first;
+            }
+        }
+        if (bestName.empty()) {
+            // fall back to immediate best by predicted peak
+            bestName = cands.front().first;
+        }
+        cur = executeNode(bestName, prob, cur);
+    }
+    return cur;
 }
 
 ScheduleState scheduleWithDebug(const Problem& prob, size_t maxExpansions, double timeLimitSeconds,
