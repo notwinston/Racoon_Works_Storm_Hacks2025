@@ -83,7 +83,15 @@ bool parseExamplesFormat(std::istream& in, long& total_memory,
     }
 
     // We'll parse once to capture fields, then a second pass to resolve ids to names
-    struct Row { int id{-1}; std::string name; int num_inputs{0}; std::vector<int> input_ids; long run_mem{0}; long time{0}; };
+    struct Row {
+        int id{-1};
+        std::string name;
+        int num_inputs{0};
+        std::vector<int> input_ids;
+        long workspace_mem{0};
+        long output_mem{0};
+        long time{0};
+    };
     std::vector<Row> rows;
     rows.reserve(1024);
 
@@ -97,11 +105,11 @@ bool parseExamplesFormat(std::istream& in, long& total_memory,
         for (int i = 0; i < r.num_inputs; ++i) {
             int iid = -1; if (!(ss >> iid)) { iid = -1; } r.input_ids.push_back(iid);
         }
-        long mem = 0, timec = 0;
-        ss >> mem;
-        ss >> timec;
-        r.run_mem = mem;
-        r.time = timec;
+        long ws = 0, outm = 0, t = 0;
+        ss >> ws; ss >> outm; ss >> t;
+        r.workspace_mem = std::max<long>(ws, 0);
+        r.output_mem = std::max<long>(outm, 0);
+        r.time = std::max<long>(t, 0);
         rows.push_back(std::move(r));
     }
 
@@ -119,8 +127,8 @@ bool parseExamplesFormat(std::istream& in, long& total_memory,
             auto it = id_to_name.find(iid);
             if (it != id_to_name.end()) spec.inputs.push_back(it->second);
         }
-        spec.run_mem = static_cast<int>(r.run_mem);
-        spec.output_mem = static_cast<int>(r.run_mem);
+        spec.run_mem = static_cast<int>(r.workspace_mem);
+        spec.output_mem = static_cast<int>(r.output_mem);
         spec.time_cost = static_cast<int>(r.time);
         nodes_out.push_back(std::move(spec));
     }
