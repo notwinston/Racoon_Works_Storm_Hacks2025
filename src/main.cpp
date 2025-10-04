@@ -5,7 +5,7 @@
 
 int main(int argc, char** argv) {
     if (argc < 2) {
-        std::cout << "Usage: scheduler <input_file>\n";
+        std::cout << "Usage: scheduler <input_file> [--verbose] [--trace] [--max-expansions N] [--time-limit S]\n";
         return 0;
     }
     std::ifstream fin(argv[1]);
@@ -23,11 +23,28 @@ int main(int argc, char** argv) {
         }
     }
     Problem prob = buildProblem(total_memory, specs);
-    // Fast attempt with limits to avoid long-running branch-and-bound
-    ScheduleState result = scheduleWithLimits(prob, 200000, 2.0);
+
+    // Parse optional flags
+    DebugOptions dbg{}; size_t maxExp = 200000; double tlim = 2.0;
+    for (int i = 2; i < argc; ++i) {
+        std::string a = argv[i];
+        if (a == "--verbose") dbg.verbose = true;
+        else if (a == "--trace") dbg.trace = true;
+        else if (a == "--max-expansions" && i + 1 < argc) { maxExp = std::stoull(argv[++i]); }
+        else if (a == "--time-limit" && i + 1 < argc) { tlim = std::stod(argv[++i]); }
+    }
+
+    DebugStats stats{};
+    ScheduleState result = scheduleWithDebug(prob, maxExp, tlim, dbg, stats);
     if (result.execution_order.size() != prob.nodes.size() || result.memory_peak > prob.total_memory) {
-        // Fallback to a greedy schedule to at least produce output
-        result = greedySchedule(prob);
+        // Fallbacks: heuristic, then beam, then greedy
+        result = heuristicSchedule(prob);
+        if (result.execution_order.size() != prob.nodes.size() || result.memory_peak > prob.total_memory) {
+            result = beamSearchSchedule(prob, 64, maxExp);
+        }
+        if (result.execution_order.size() != prob.nodes.size()) {
+            result = greedySchedule(prob);
+        }
         if (result.execution_order.size() != prob.nodes.size()) {
             std::cerr << "No feasible schedule found under memory limit.\n";
             return 3;

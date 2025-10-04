@@ -129,6 +129,43 @@ scheduler/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/scheduler.dir/build.make CMakeFiles/scheduler.dir/build
 .PHONY : scheduler/fast
 
+#=============================================================================
+# Target rules for targets named baseline
+
+# Build rule for target.
+baseline: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 baseline
+.PHONY : baseline
+
+# fast build rule for target.
+baseline/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/baseline.dir/build.make CMakeFiles/baseline.dir/build
+.PHONY : baseline/fast
+
+src/baseline.o: src/baseline.cpp.o
+.PHONY : src/baseline.o
+
+# target to build an object file
+src/baseline.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/baseline.dir/build.make CMakeFiles/baseline.dir/src/baseline.cpp.o
+.PHONY : src/baseline.cpp.o
+
+src/baseline.i: src/baseline.cpp.i
+.PHONY : src/baseline.i
+
+# target to preprocess a source file
+src/baseline.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/baseline.dir/build.make CMakeFiles/baseline.dir/src/baseline.cpp.i
+.PHONY : src/baseline.cpp.i
+
+src/baseline.s: src/baseline.cpp.s
+.PHONY : src/baseline.s
+
+# target to generate assembly for a file
+src/baseline.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/baseline.dir/build.make CMakeFiles/baseline.dir/src/baseline.cpp.s
+.PHONY : src/baseline.cpp.s
+
 src/main.o: src/main.cpp.o
 .PHONY : src/main.o
 
@@ -159,6 +196,7 @@ src/parser.o: src/parser.cpp.o
 # target to build an object file
 src/parser.cpp.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/scheduler.dir/build.make CMakeFiles/scheduler.dir/src/parser.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/baseline.dir/build.make CMakeFiles/baseline.dir/src/parser.cpp.o
 .PHONY : src/parser.cpp.o
 
 src/parser.i: src/parser.cpp.i
@@ -167,6 +205,7 @@ src/parser.i: src/parser.cpp.i
 # target to preprocess a source file
 src/parser.cpp.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/scheduler.dir/build.make CMakeFiles/scheduler.dir/src/parser.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/baseline.dir/build.make CMakeFiles/baseline.dir/src/parser.cpp.i
 .PHONY : src/parser.cpp.i
 
 src/parser.s: src/parser.cpp.s
@@ -175,6 +214,7 @@ src/parser.s: src/parser.cpp.s
 # target to generate assembly for a file
 src/parser.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/scheduler.dir/build.make CMakeFiles/scheduler.dir/src/parser.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/baseline.dir/build.make CMakeFiles/baseline.dir/src/parser.cpp.s
 .PHONY : src/parser.cpp.s
 
 src/scheduler.o: src/scheduler.cpp.o
@@ -209,7 +249,11 @@ help:
 	@echo "... depend"
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
+	@echo "... baseline"
 	@echo "... scheduler"
+	@echo "... src/baseline.o"
+	@echo "... src/baseline.i"
+	@echo "... src/baseline.s"
 	@echo "... src/main.o"
 	@echo "... src/main.i"
 	@echo "... src/main.s"

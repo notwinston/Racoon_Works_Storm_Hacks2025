@@ -1,5 +1,6 @@
 #include "scheduler.hpp"
 #include <chrono>
+#include <iostream>
 
 // Bring in implementations from the previous reference file
 // Only include what's necessary here
@@ -148,23 +149,29 @@ ScheduleState schedule(const Problem& prob) {
 }
 
 static void dfsScheduleLimited(const Problem& prob, ScheduleState& current, ScheduleState& best, bool& has_best,
-                               size_t& expansionsLeft, const std::chrono::steady_clock::time_point& deadline) {
+                               size_t& expansionsLeft, const std::chrono::steady_clock::time_point& deadline,
+                               const DebugOptions* dbg, DebugStats* stats) {
     if (std::chrono::steady_clock::now() > deadline || expansionsLeft == 0) return;
     if (current.computed.size() == prob.nodes.size()) {
         if (!has_best || isBetterSchedule(current, best, prob.total_memory)) { best = current; has_best = true; }
         return;
     }
     auto ready = getReadyNodeNames(prob, current);
-    if (ready.empty()) return;
+    if (ready.empty()) { if (stats) stats->deadEnds++; return; }
     ready = pruneReadyListDynamic(ready, prob, current);
     for (const auto& nm : ready) {
         if (std::chrono::steady_clock::now() > deadline || expansionsLeft == 0) return;
         const Node& node = prob.nodes.at(nm);
         int predicted_peak = calculateSequentialPeak(current, node, current.current_memory);
-        if (predicted_peak > prob.total_memory) continue;
+        if (predicted_peak > prob.total_memory) { if (stats) stats->prunedByMemory++; continue; }
         ScheduleState next = executeNode(nm, prob, current);
-        --expansionsLeft;
-        dfsScheduleLimited(prob, next, best, has_best, expansionsLeft, deadline);
+        --expansionsLeft; if (stats) stats->expansions++;
+        if (dbg && dbg->trace) {
+            std::cerr << "expand: " << nm << " time=" << next.total_time
+                      << " curMem=" << next.current_memory << " peak=" << next.memory_peak
+                      << " readyCount=" << ready.size() << " left=" << expansionsLeft << "\n";
+        }
+        dfsScheduleLimited(prob, next, best, has_best, expansionsLeft, deadline, dbg, stats);
     }
 }
 
@@ -175,7 +182,7 @@ ScheduleState scheduleWithLimits(const Problem& prob, size_t maxExpansions, doub
     if (timeLimitSeconds <= 0.0) timeLimitSeconds = 2.0;
     auto deadline = std::chrono::steady_clock::now() + std::chrono::duration_cast<std::chrono::steady_clock::duration>(
         std::chrono::duration<double>(timeLimitSeconds));
-    dfsScheduleLimited(prob, init, best, has_best, maxExpansions, deadline);
+    dfsScheduleLimited(prob, init, best, has_best, maxExpansions, deadline, nullptr, nullptr);
     return has_best ? best : ScheduleState{};
 }
 
@@ -199,6 +206,104 @@ ScheduleState greedySchedule(const Problem& prob) {
         cur = executeNode(bestName, prob, cur);
     }
     return cur;
+}
+
+// Heuristic schedule: prioritize negative-impact nodes first; otherwise minimize (peak, time)
+ScheduleState heuristicSchedule(const Problem& prob) {
+    ScheduleState cur;
+    while (cur.computed.size() < prob.nodes.size()) {
+        auto ready = getReadyNodeNames(prob, cur);
+        if (ready.empty()) break;
+        std::string bestName; int bestPredPeak = std::numeric_limits<int>::max(); int bestTime = std::numeric_limits<int>::max(); bool pickedNegative = false;
+        for (const auto& nm : ready) {
+            const Node& node = prob.nodes.at(nm);
+            int predicted_peak = calculateSequentialPeak(cur, node, cur.current_memory);
+            if (predicted_peak > prob.total_memory) continue;
+            int dynImpact = calculateDynamicImpact(node, cur, prob.dependencies, cur.output_memory);
+            if (dynImpact <= 0) {
+                if (!pickedNegative || node.getPeak() < prob.nodes.at(bestName).getPeak()) { bestName = nm; pickedNegative = true; }
+                continue;
+            }
+            if (pickedNegative) continue;
+            int t = node.getTimeCost();
+            if (predicted_peak < bestPredPeak || (predicted_peak == bestPredPeak && t < bestTime)) {
+                bestPredPeak = predicted_peak; bestTime = t; bestName = nm;
+            }
+        }
+        if (bestName.empty()) break;
+        cur = executeNode(bestName, prob, cur);
+    }
+    return cur;
+}
+
+// Beam search: keep top-K partial schedules by (validity, time, peak)
+ScheduleState beamSearchSchedule(const Problem& prob, size_t beamWidth, size_t maxExpansions) {
+    if (beamWidth == 0) beamWidth = 32; if (maxExpansions == 0) maxExpansions = 200000;
+    struct Entry { ScheduleState state; bool operator<(const Entry& other) const {
+        // We want a min-heap style comparison; but for vector sort we'll use explicit key
+        return false; } };
+    std::vector<ScheduleState> beam; beam.reserve(beamWidth);
+    beam.push_back(ScheduleState{});
+    size_t expansions = 0;
+    ScheduleState best; bool has_best = false;
+    while (!beam.empty() && expansions < maxExpansions) {
+        std::vector<ScheduleState> nextBeam;
+        for (const auto& cur : beam) {
+            if (cur.computed.size() == prob.nodes.size()) {
+                if (!has_best || isBetterSchedule(cur, best, prob.total_memory)) { best = cur; has_best = true; }
+                continue;
+            }
+            auto ready = getReadyNodeNames(prob, cur);
+            if (ready.empty()) continue;
+            // Sort candidates by predicted peak then time
+            std::vector<std::pair<std::string, std::pair<int,int>>> cands;
+            for (const auto& nm : ready) {
+                const Node& node = prob.nodes.at(nm);
+                int p = calculateSequentialPeak(cur, node, cur.current_memory);
+                if (p > prob.total_memory) continue;
+                cands.push_back({nm, {p, node.getTimeCost()}});
+            }
+            std::sort(cands.begin(), cands.end(), [](const auto& a, const auto& b){
+                if (a.second.first != b.second.first) return a.second.first < b.second.first;
+                return a.second.second < b.second.second;
+            });
+            size_t expandCount = std::min(cands.size(), beamWidth);
+            for (size_t i = 0; i < expandCount && expansions < maxExpansions; ++i) {
+                nextBeam.push_back(executeNode(cands[i].first, prob, cur));
+                ++expansions;
+            }
+        }
+        if (nextBeam.empty()) break;
+        // Keep best beamWidth states by (validity, time, peak)
+        std::sort(nextBeam.begin(), nextBeam.end(), [&](const ScheduleState& a, const ScheduleState& b){
+            bool aValid = a.memory_peak <= prob.total_memory;
+            bool bValid = b.memory_peak <= prob.total_memory;
+            if (aValid != bValid) return aValid; // valid first
+            if (a.total_time != b.total_time) return a.total_time < b.total_time;
+            return a.memory_peak < b.memory_peak;
+        });
+        if (nextBeam.size() > beamWidth) nextBeam.resize(beamWidth);
+        beam.swap(nextBeam);
+    }
+    return has_best ? best : (beam.empty() ? ScheduleState{} : beam.front());
+}
+
+ScheduleState scheduleWithDebug(const Problem& prob, size_t maxExpansions, double timeLimitSeconds,
+                                const DebugOptions& opts, DebugStats& stats) {
+    ScheduleState init; ScheduleState best; bool has_best = false;
+    if (maxExpansions == 0) maxExpansions = 100000;
+    if (timeLimitSeconds <= 0.0) timeLimitSeconds = 2.0;
+    auto deadline = std::chrono::steady_clock::now() + std::chrono::duration_cast<std::chrono::steady_clock::duration>(
+        std::chrono::duration<double>(timeLimitSeconds));
+    size_t left = maxExpansions;
+    dfsScheduleLimited(prob, init, best, has_best, left, deadline, &opts, &stats);
+    if (opts.verbose) {
+        std::cerr << "dbg: expansions=" << stats.expansions
+                  << " prunedByMemory=" << stats.prunedByMemory
+                  << " deadEnds=" << stats.deadEnds
+                  << " found=" << (has_best ? 1 : 0) << "\n";
+    }
+    return has_best ? best : ScheduleState{};
 }
 
 
