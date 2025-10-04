@@ -2,7 +2,7 @@
 // NODE CLASS IMPLEMENTATION - Enhanced for Research Paper Algorithm
 // ============================================================================
 
-#include "node.h"
+#include "node.hpp"
 #include <algorithm>
 #include <iostream>
 #include <fstream>

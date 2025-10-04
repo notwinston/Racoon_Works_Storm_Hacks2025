@@ -30,7 +30,17 @@ public:
     int getImpact() const { return impact_; }
     void setImpact(int impact) { impact_ = impact; }
 };
-
+/** 
+ * ScheduleState struct - Represents the state of the schedule
+ * 
+ * Attributes:
+ * - execution_order: The order in which the nodes are executed
+ * - current_memory: The current memory usage
+ * - memory_peak: The peak memory usage
+ * - total_time: The total time required to execute the nodes
+ * - computed: The nodes that have been executed
+ * - output_memory: The memory occupied by the output of the nodes
+ */
 struct ScheduleState {
     std::vector<std::string> execution_order;
     int current_memory{0};

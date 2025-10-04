@@ -25,7 +25,6 @@ add_executable(scheduler
   src/main.cpp
   src/parser.cpp
   src/scheduler.cpp
-  src/node.cpp
 )
 target_include_directories(scheduler PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
