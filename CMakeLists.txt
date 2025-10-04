@@ -17,9 +17,14 @@ if(APPLE)
   add_link_options(-stdlib=libc++)
 endif()
 
-# Target: algorithms
+# Include directories
+include_directories(include)
+
+# Target: algorithms (main executable)
 add_executable(algorithms
-  equations/algorithms.cpp
+  src/main.cpp
+  src/node.cpp
+  src/scheduler.cpp
 )
 
 # Warnings
