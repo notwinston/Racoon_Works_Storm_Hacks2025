@@ -1,0 +1,13 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "C/C++ Runner: Debug Session",
+      "type": "lldb",
+      "request": "launch",
+      "args": [],
+      "cwd": "/Users/denniskritchko/Racoon_Works_Storm_Hacks2025/equations",
+      "program": "/Users/denniskritchko/Racoon_Works_Storm_Hacks2025/equations/build/Debug/outDebug"
+    }
+  ]
+}
