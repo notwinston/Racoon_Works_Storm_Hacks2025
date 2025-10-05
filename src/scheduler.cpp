@@ -6,6 +6,20 @@
 #include <set>
 #include <queue>
 
+// Memoization cache for avoiding recomputation of equivalent states
+struct StateHash {
+    size_t operator()(const std::unordered_set<std::string>& computed) const {
+        size_t hash = 0;
+        for (const auto& name : computed) {
+            hash ^= std::hash<std::string>{}(name) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+        }
+        return hash;
+    }
+};
+
+// Cache for memoization - maps computed nodes set to best known result
+static thread_local std::unordered_map<std::unordered_set<std::string>, std::pair<int, int>, StateHash> memo_cache;
+
 // Bring in implementations from the previous reference file
 // Only include what's necessary here
 
@@ -41,7 +55,7 @@ std::unordered_set<std::string> getFreeableInputs(
     return freeable;
 }
 
-static std::vector<std::string> getReadyNodeNames(const Problem& prob, const ScheduleState& state) {
+std::vector<std::string> getReadyNodeNames(const Problem& prob, const ScheduleState& state) {
     std::vector<std::string> ready;
     ready.reserve(prob.nodes.size());
     for (const auto& kv : prob.nodes) {
@@ -77,7 +91,7 @@ static int calculateDynamicImpact(
     return static_cast<int>(impact);
 }
 
-static ScheduleState executeNode(
+ScheduleState executeNode(
     const std::string& node_name,
     const Problem& prob,
     const ScheduleState& state) {
@@ -85,14 +99,34 @@ static ScheduleState executeNode(
     const Node& node = prob.nodes.at(node_name);
     int predicted_peak = calculateSequentialPeak(state, node, state.current_memory);
     next.memory_peak = std::max(state.memory_peak, predicted_peak);
-    ScheduleState postStateForFree = state;
-    postStateForFree.computed.insert(node.getName());
-    auto freeable = getFreeableInputs(node, postStateForFree, prob.dependencies);
+    
+    // Optimize freeable computation by avoiding extra ScheduleState copy
+    std::unordered_set<std::string> freeable;
+    for (const auto& input_name : node.getInputs()) {
+        auto dep_it = prob.dependencies.find(input_name);
+        if (dep_it == prob.dependencies.end()) { 
+            freeable.insert(input_name); 
+            continue; 
+        }
+        bool all_consumers_done = true;
+        for (const auto& consumer : dep_it->second) {
+            if (state.computed.find(consumer) == state.computed.end() && consumer != node_name) { 
+                all_consumers_done = false; 
+                break; 
+            }
+        }
+        if (all_consumers_done) freeable.insert(input_name);
+    }
+    
     long freed = 0;
     for (const auto& nm : freeable) {
         auto it = next.output_memory.find(nm);
-        if (it != next.output_memory.end()) { freed += it->second; next.output_memory.erase(it); }
+        if (it != next.output_memory.end()) { 
+            freed += it->second; 
+            next.output_memory.erase(it); 
+        }
     }
+    
     long impact = static_cast<long>(node.getOutputMem()) - freed;
     long new_current = static_cast<long>(next.current_memory) + impact;
     if (new_current < 0) new_current = 0;
@@ -100,8 +134,9 @@ static ScheduleState executeNode(
     next.total_time += node.getTimeCost();
     next.output_memory[node.getName()] = node.getOutputMem();
     next.execution_order.push_back(node.getName());
+    
     // recompute flag: true if this node was already computed before and we are running again to restore its output
-    bool isRecompute = (state.computed.find(node.getName()) != state.computed.end());
+    bool isRecompute = (state.computed.count(node.getName()) > 0);
     next.recompute_flags.push_back(isRecompute);
     next.computed.insert(node.getName());
     return next;
@@ -247,28 +282,119 @@ static void dfsSchedule(const Problem& prob, ScheduleState& current, ScheduleSta
 
 
 
+// Optimized version with caching and reduced redundant calculations
+struct NodeExpansionCache {
+    std::unordered_map<std::string, int> predicted_peaks;
+    std::unordered_map<std::string, int> dynamic_impacts;
+    
+    void clear() {
+        predicted_peaks.clear();
+        dynamic_impacts.clear();
+    }
+};
+
+// Fast ready node computation using cached node names for better memory access patterns
+static std::vector<std::string> getReadyNodeNamesOptimized(
+    const Problem& prob, 
+    const ScheduleState& state,
+    const std::vector<std::string>& node_names_cache) {
+    
+    std::vector<std::string> ready;
+    ready.reserve(node_names_cache.size());
+    
+    for (const auto& name : node_names_cache) {
+        if (state.computed.count(name)) continue;
+        
+        const Node& n = prob.nodes.at(name);
+        bool all_inputs_ready = true;
+        
+        // Early exit optimization for input checking
+        for (const auto& inName : n.getInputs()) {
+            if (state.output_memory.find(inName) == state.output_memory.end()) {
+                all_inputs_ready = false;
+                break;
+            }
+        }
+        
+        if (all_inputs_ready) {
+            ready.push_back(name);
+        }
+    }
+    return ready;
+}
+
 static void dfsScheduleLimited(const Problem& prob, ScheduleState& current, ScheduleState& best, bool& has_best,
                                size_t& expansionsLeft, const std::chrono::steady_clock::time_point& deadline,
                                const DebugOptions* dbg, DebugStats* stats) {
-    if (std::chrono::steady_clock::now() > deadline || expansionsLeft == 0) return;
+    // Early termination checks - batch them for better branch prediction
+    if (expansionsLeft == 0) return;
+    
+    // Less frequent time checks to reduce syscall overhead
+    static size_t time_check_counter = 0;
+    if ((++time_check_counter & 0xFF) == 0) {  // Check every 256 expansions
+        if (std::chrono::steady_clock::now() > deadline) return;
+    }
+    
     if (current.computed.size() == prob.nodes.size()) {
-        if (!has_best || isBetterSchedule(current, best, prob.total_memory)) { best = current; has_best = true; }
+        if (!has_best || isBetterSchedule(current, best, prob.total_memory)) { 
+            best = current; 
+            has_best = true; 
+        }
         return;
     }
-    auto ready = getReadyNodeNames(prob, current);
+    
+    // Branch and bound: if current state is already worse than best known, prune
+    if (has_best && current.total_time >= best.total_time && current.memory_peak >= best.memory_peak) {
+        return;
+    }
+    
+    // Memoization check: if we've seen this computed set before with better results, prune
+    auto memo_it = memo_cache.find(current.computed);
+    if (memo_it != memo_cache.end()) {
+        if (current.total_time >= memo_it->second.first && current.memory_peak >= memo_it->second.second) {
+            return;
+        }
+    } else {
+        // Store this state in memo cache
+        memo_cache[current.computed] = {current.total_time, current.memory_peak};
+    }
+    
+    // Cache node names for better memory access patterns
+    static thread_local std::vector<std::string> node_names_cache;
+    if (node_names_cache.empty()) {
+        node_names_cache.reserve(prob.nodes.size());
+        for (const auto& kv : prob.nodes) {
+            node_names_cache.push_back(kv.first);
+        }
+    }
+    
+    auto ready = getReadyNodeNamesOptimized(prob, current, node_names_cache);
     if (ready.empty()) {
         // Consider recomputation of needed but spilled outputs
         ready = getRecomputeCandidates(prob, current);
-        if (ready.empty()) { if (stats) stats->deadEnds++; return; }
+        if (ready.empty()) { 
+            if (stats) stats->deadEnds++; 
+            return; 
+        }
     }
+    
     ready = pruneReadyListDynamic(ready, prob, current);
-    // If all candidates exceed memory, attempt a spill and retry once
+    
+    // Pre-calculate predicted peaks to avoid redundant computation
+    std::vector<std::pair<std::string, int>> candidates_with_peaks;
+    candidates_with_peaks.reserve(ready.size());
+    
     bool allExceed = true;
     for (const auto& nm : ready) {
         const Node& node = prob.nodes.at(nm);
         int predicted_peak = calculateSequentialPeak(current, node, current.current_memory);
-        if (predicted_peak <= prob.total_memory) { allExceed = false; break; }
+        candidates_with_peaks.emplace_back(nm, predicted_peak);
+        
+        if (predicted_peak <= prob.total_memory) {
+            allExceed = false;
+        }
     }
+    
     if (allExceed) {
         ScheduleState spilled = current;
         if (trySpillBest(prob, spilled) || trySpillLargest(spilled)) {
@@ -276,18 +402,29 @@ static void dfsScheduleLimited(const Problem& prob, ScheduleState& current, Sche
         }
         return;
     }
-    for (const auto& nm : ready) {
-        if (std::chrono::steady_clock::now() > deadline || expansionsLeft == 0) return;
-        const Node& node = prob.nodes.at(nm);
-        int predicted_peak = calculateSequentialPeak(current, node, current.current_memory);
-        if (predicted_peak > prob.total_memory) { if (stats) stats->prunedByMemory++; continue; }
+    
+    // Sort candidates by predicted peak for better pruning (explore better candidates first)
+    std::sort(candidates_with_peaks.begin(), candidates_with_peaks.end(),
+              [](const auto& a, const auto& b) { return a.second < b.second; });
+    
+    for (const auto& [nm, predicted_peak] : candidates_with_peaks) {
+        if (expansionsLeft == 0) return;
+        
+        if (predicted_peak > prob.total_memory) { 
+            if (stats) stats->prunedByMemory++; 
+            continue; 
+        }
+        
         ScheduleState next = executeNode(nm, prob, current);
-        --expansionsLeft; if (stats) stats->expansions++;
+        --expansionsLeft; 
+        if (stats) stats->expansions++;
+        
         if (dbg && dbg->trace) {
             std::cerr << "expand: " << nm << " time=" << next.total_time
                       << " curMem=" << next.current_memory << " peak=" << next.memory_peak
                       << " readyCount=" << ready.size() << " left=" << expansionsLeft << "\n";
         }
+        
         dfsScheduleLimited(prob, next, best, has_best, expansionsLeft, deadline, dbg, stats);
     }
 }
@@ -455,6 +592,9 @@ ScheduleState dpGreedySchedule(const Problem& prob, size_t lookaheadDepth, size_
 }
 
 ScheduleState dfsScheduleLimited(const Problem& prob, size_t maxExpansions, double timeLimitSeconds) {
+    // Clear memoization cache at start of new search
+    memo_cache.clear();
+    
     ScheduleState init; ScheduleState best; bool has_best = false;
     if (maxExpansions == 0) maxExpansions = 200000;
     if (timeLimitSeconds <= 0.0) timeLimitSeconds = 5.0;
@@ -465,134 +605,15 @@ ScheduleState dfsScheduleLimited(const Problem& prob, size_t maxExpansions, doub
     return has_best ? best : ScheduleState{};
 }
 
-// Critical Path Method: Priority based on longest path to completion
-ScheduleState criticalPathSchedule(const Problem& prob) {
-    // Calculate critical path priorities for each node
-    std::unordered_map<std::string, int> criticalPathLength;
-    std::unordered_map<std::string, std::unordered_set<std::string>> dependents;
-    
-    // Build dependency graph (who depends on this node)
-    for (const auto& [name, node] : prob.nodes) {
-        for (const auto& input : node.getInputs()) {
-            if (prob.nodes.count(input)) {
-                dependents[input].insert(name);
-            }
-        }
-    }
-    
-    // Calculate critical path lengths using topological ordering (bottom-up)
-    std::function<int(const std::string&)> calculateCriticalPath = [&](const std::string& name) -> int {
-        if (criticalPathLength.count(name)) return criticalPathLength[name];
-        
-        const Node& node = prob.nodes.at(name);
-        int maxPathFromHere = node.getTimeCost();
-        
-        // Find longest path through dependents
-        for (const auto& dependent : dependents[name]) {
-            maxPathFromHere = std::max(maxPathFromHere, 
-                node.getTimeCost() + calculateCriticalPath(dependent));
-        }
-        
-        return criticalPathLength[name] = maxPathFromHere;
-    };
-    
-    // Calculate critical path for all nodes
-    for (const auto& [name, node] : prob.nodes) {
-        calculateCriticalPath(name);
-    }
-    
-    // Schedule using critical path priorities (longest critical path first)
-    ScheduleState cur;
-    while (cur.computed.size() < prob.nodes.size()) {
-        auto ready = getReadyNodeNames(prob, cur);
-        if (ready.empty()) break;
-        
-        std::string bestName;
-        int bestCriticalPath = -1;
-        int bestPredictedPeak = std::numeric_limits<int>::max();
-        
-        for (const auto& nm : ready) {
-            const Node& node = prob.nodes.at(nm);
-            int predicted_peak = calculateSequentialPeak(cur, node, cur.current_memory);
-            if (predicted_peak > prob.total_memory) continue;
-            
-            int pathLength = criticalPathLength[nm];
-            
-            // Prioritize by critical path length, then by memory efficiency
-            if (pathLength > bestCriticalPath || 
-                (pathLength == bestCriticalPath && predicted_peak < bestPredictedPeak)) {
-                bestCriticalPath = pathLength;
-                bestPredictedPeak = predicted_peak;
-                bestName = nm;
-            }
-        }
-        
-        if (bestName.empty()) break;
-        cur = executeNode(bestName, prob, cur);
-    }
-    
-    return cur;
-}
 
-// TPD-based scheduling: Task Priority Diagram approach from the paper
-ScheduleState tpdBasedSchedule(const Problem& prob) {
-    // Calculate task "effort" - sum of execution times across all machines
-    std::vector<std::pair<std::string, double>> taskEfforts;
-    
-    for (const auto& [name, node] : prob.nodes) {
-        // Estimate average execution time as "effort"
-        double avgTime = node.getTimeCost();
-        taskEfforts.emplace_back(name, avgTime);
-    }
-    
-    // Sort by effort (higher effort = higher priority)
-    std::sort(taskEfforts.begin(), taskEfforts.end(), 
-              [](const auto& a, const auto& b) { return a.second > b.second; });
-    
-    // Schedule tasks in priority order, but only when ready
-    ScheduleState cur;
-    std::set<std::string> priorityOrder;
-    for (const auto& [name, effort] : taskEfforts) {
-        priorityOrder.insert(name);
-    }
-    
-    while (cur.computed.size() < prob.nodes.size()) {
-        auto ready = getReadyNodeNames(prob, cur);
-        if (ready.empty()) break;
-        
-        // Find highest priority ready task
-        std::string bestName;
-        int bestPredictedPeak = std::numeric_limits<int>::max();
-        double bestEffort = -1;
-        
-        for (const auto& nm : ready) {
-            const Node& node = prob.nodes.at(nm);
-            int predicted_peak = calculateSequentialPeak(cur, node, cur.current_memory);
-            if (predicted_peak > prob.total_memory) continue;
-            
-            // Find effort for this task
-            auto it = std::find_if(taskEfforts.begin(), taskEfforts.end(),
-                                   [&nm](const auto& pair) { return pair.first == nm; });
-            double effort = (it != taskEfforts.end()) ? it->second : 0;
-            
-            // Prioritize by effort, then by memory efficiency
-            if (effort > bestEffort || 
-                (effort == bestEffort && predicted_peak < bestPredictedPeak)) {
-                bestEffort = effort;
-                bestPredictedPeak = predicted_peak;
-                bestName = nm;
-            }
-        }
-        
-        if (bestName.empty()) break;
-        cur = executeNode(bestName, prob, cur);
-    }
-    
-    return cur;
-}
+
+
 
 ScheduleState scheduleWithDebug(const Problem& prob, size_t maxExpansions, double timeLimitSeconds,
                                 const DebugOptions& opts, DebugStats& stats) {
+    // Clear memoization cache at start of new search
+    memo_cache.clear();
+    
     ScheduleState init; ScheduleState best; bool has_best = false;
     if (maxExpansions == 0) maxExpansions = 200000;
     if (timeLimitSeconds <= 0.0) timeLimitSeconds = 5.0;
@@ -604,8 +625,8 @@ ScheduleState scheduleWithDebug(const Problem& prob, size_t maxExpansions, doubl
         std::cerr << "dbg: expansions=" << stats.expansions
                   << " prunedByMemory=" << stats.prunedByMemory
                   << " deadEnds=" << stats.deadEnds
+                  << " memoHits=" << memo_cache.size()
                   << " found=" << (has_best ? 1 : 0) << "\n";
     }
     return has_best ? best : ScheduleState{};
 }
-
