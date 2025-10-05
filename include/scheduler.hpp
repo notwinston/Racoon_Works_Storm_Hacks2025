@@ -16,8 +16,12 @@ ScheduleState beamSearchSchedule(const Problem& prob, size_t beamWidth, size_t m
 ScheduleState heuristicSchedule(const Problem& prob);
 ScheduleState dpGreedySchedule(const Problem& prob, size_t lookaheadDepth, size_t branchFactor);
 ScheduleState dfsScheduleLimited(const Problem& prob, size_t maxExpansions, double timeLimitSeconds);
-ScheduleState criticalPathSchedule(const Problem& prob);
-ScheduleState tpdBasedSchedule(const Problem& prob);
+ScheduleState recomputationSchedule(const Problem& prob);
+ScheduleState hybridBeamDFSSchedule(const Problem& prob);
+
+// External utility functions needed by adapters
+std::vector<std::string> getReadyNodeNames(const Problem& prob, const ScheduleState& state);
+ScheduleState executeNode(const std::string& node_name, const Problem& prob, const ScheduleState& state);
 
 struct DebugOptions {
     bool verbose{false};     // print high-level choices

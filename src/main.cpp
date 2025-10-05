@@ -26,7 +26,9 @@ int main(int argc, char** argv) {
 
     // Adaptive parameters based on problem size
     size_t num_nodes = prob.nodes.size();
-    size_t max_expansions, beam_width, dp_depth, dp_branch;
+    size_t max_expansions;
+    // Note: beam_width, dp_depth, dp_branch are calculated but not currently used
+    // size_t beam_width, dp_depth, dp_branch;
     double time_limit;
     
         ScheduleState result;
@@ -36,41 +38,41 @@ int main(int argc, char** argv) {
         // Ultra-massive problems: Set minimal parameters
         std::cout << "Ultra-massive problem detected (" << num_nodes << " nodes)\n";
         max_expansions = 10;
-        beam_width = 1;
-        dp_depth = 1;
-        dp_branch = 1;
+        // beam_width = 1;  // Currently unused
+        // dp_depth = 1;    // Currently unused
+        // dp_branch = 1;   // Currently unused
         time_limit = 0.1;
     } else if (num_nodes > 50000) {
         // Very large problems: Conservative parameters
         std::cout << "Very large problem detected (" << num_nodes << " nodes)\n";
         max_expansions = 50;
-        beam_width = 1;
-        dp_depth = 1;
-        dp_branch = 1;
+        // beam_width = 1;  // Currently unused
+        // dp_depth = 1;    // Currently unused
+        // dp_branch = 1;   // Currently unused
         time_limit = 0.2;
     } else if (num_nodes > 10000) {
         // Large problems: Fast parameters
         std::cout << "Large problem detected (" << num_nodes << " nodes)\n";
         max_expansions = std::min<size_t>(500, num_nodes / 100);
-        beam_width = 2;
-        dp_depth = 1;
-        dp_branch = 2;
+        // beam_width = 2;  // Currently unused
+        // dp_depth = 1;    // Currently unused
+        // dp_branch = 2;   // Currently unused
         time_limit = 1.0;
     } else if (num_nodes > 1000) {
         // Medium problems: Moderate parameters
         std::cout << "Medium problem detected (" << num_nodes << " nodes)\n";
         max_expansions = std::min<size_t>(10000, num_nodes);
-        beam_width = 8;
-        dp_depth = 2;
-        dp_branch = 4;
+        // beam_width = 8;  // Currently unused
+        // dp_depth = 2;    // Currently unused
+        // dp_branch = 4;   // Currently unused
         time_limit = 3.0;
     } else {
         // Small problems: Full parameters
         std::cout << "Small problem detected (" << num_nodes << " nodes)\n";
         max_expansions = 200000;
-        beam_width = 64;
-        dp_depth = 3;
-        dp_branch = 8;
+        // beam_width = 64; // Currently unused
+        // dp_depth = 3;    // Currently unused
+        // dp_branch = 8;   // Currently unused
         time_limit = 5.0;
     }
 
@@ -120,5 +122,4 @@ int main(int argc, char** argv) {
     std::cout << "Memory peak: " << result.memory_peak << " (limit=" << prob.total_memory << ")\n";
     return 0;
 }
-
 
