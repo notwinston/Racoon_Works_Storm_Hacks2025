@@ -1,5 +1,6 @@
 #include "parser.hpp"
 #include "scheduler.hpp"
+#include "../Visualization/SimpleDAGVisualizer.h"
 #include <fstream>
 #include <iostream>
 
@@ -66,6 +67,25 @@ int main(int argc, char** argv) {
     std::cout << "\n* denotes recomputation\n";
     std::cout << "Total time: " << result.total_time << "\n";
     std::cout << "Memory peak: " << result.memory_peak << " (limit=" << prob.total_memory << ")\n";
+    
+    // Create visualization with input filename
+    std::cout << "\n🎨 Generating DAG visualization...\n";
+    
+    // Extract filename from input path
+    std::string input_file = argv[1];
+    size_t last_slash = input_file.find_last_of("/\\");
+    std::string filename = (last_slash != std::string::npos) ? 
+                          input_file.substr(last_slash + 1) : input_file;
+    
+    // Remove extension if present
+    size_t last_dot = filename.find_last_of(".");
+    if (last_dot != std::string::npos) {
+        filename = filename.substr(0, last_dot);
+    }
+    
+    SimpleDAGVisualizer visualizer("output");
+    visualizer.visualizeScheduleState(result, prob, filename);
+    
     return 0;
 }
 

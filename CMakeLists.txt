@@ -25,11 +25,26 @@ add_executable(scheduler
 )
 target_include_directories(scheduler PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
+# Target: scheduler_with_viz (scheduler with visualization)
+add_executable(scheduler_with_viz
+  src/main.cpp
+  src/parser.cpp
+  src/scheduler.cpp
+  Visualization/SimpleDAGVisualizer.cpp
+)
+target_include_directories(scheduler_with_viz PRIVATE 
+  ${CMAKE_CURRENT_SOURCE_DIR}/include 
+  ${CMAKE_CURRENT_SOURCE_DIR}/src
+  ${CMAKE_CURRENT_SOURCE_DIR}/Visualization
+)
+
 # Warnings
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "AppleClang")
   target_compile_options(scheduler PRIVATE -Wall -Wextra -Wpedantic)
+  target_compile_options(scheduler_with_viz PRIVATE -Wall -Wextra -Wpedantic)
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   target_compile_options(scheduler PRIVATE -Wall -Wextra -Wpedantic)
+  target_compile_options(scheduler_with_viz PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 
 # Baseline executable

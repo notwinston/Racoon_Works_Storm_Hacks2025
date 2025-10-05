@@ -1,0 +1,570 @@
+digraph ExecutionOrder {
+    rankdir=TB;
+    splines=false;
+    nodesep=0.8;
+    ranksep=1.2;
+    
+    node [
+        shape=box,
+        style=filled,
+        fontname="Arial Bold",
+        fontsize=14,
+        fontcolor=white,
+        width=1.5,
+        height=1.0,
+        fixedsize=true
+    ];
+    
+    edge [
+        fontname="Arial",
+        fontsize=10,
+        color="#2c3e50",
+        penwidth=2.5,
+        arrowsize=1.2
+    ];
+
+    "DropoutGenMask-op0" [
+        label="DropoutGenMask-op0\nMem: 0\nOut: 256K\nTime: 489",
+        fillcolor="#3498db",
+        shape="box",
+        penwidth=3,
+        pencolor="#2c3e50"
+    ];
+    "Transpose-op1" [
+        label="Transpose-op1\nMem: 0\nOut: 2048K\nTime: 728",
+        fillcolor="#3498db",
+        shape="box",
+        penwidth=3,
+        pencolor="#2c3e50"
+    ];
+    "Transpose-op0" [
+        label="Transpose-op0\nMem: 0\nOut: 2048K\nTime: 728",
+        fillcolor="#3498db",
+        shape="box",
+        penwidth=3,
+        pencolor="#2c3e50"
+    ];
+    "RealDiv-op0" [
+        label="RealDiv-op0\nMem: 0\nOut: 2048K\nTime: 183",
+        fillcolor="#3498db",
+        shape="box",
+        penwidth=3,
+        pencolor="#2c3e50"
+    ];
+    "ExpandDims-op0" [
+        label="ExpandDims-op0\nMem: 0\nOut: 512K\nTime: 59",
+        fillcolor="#3498db",
+        shape="box",
+        penwidth=3,
+        pencolor="#2c3e50"
+    ];
+    "Sub-op0" [
+        label="Sub-op0\nMem: 0\nOut: 512K\nTime: 525",
+        fillcolor="#3498db",
+        shape="box",
+        penwidth=3,
+        pencolor="#2c3e50"
+    ];
+    "Mul-op0" [
+        label="Mul-op0\nMem: 0\nOut: 512K\nTime: 691",
+        fillcolor="#3498db",
+        shape="box",
+        penwidth=3,
+        pencolor="#2c3e50"
+    ];
+    "RealDiv-op1" [
+        label="RealDiv-op1\nMem: 0\nOut: 2048K\nTime: 183",
+        fillcolor="#3498db",
+        shape="box",
+        penwidth=3,
+        pencolor="#2c3e50"
+    ];
+    "BatchMatMul-op0" [
+        label="BatchMatMul-op0\nMem: 0\nOut: 8192K\nTime: 505",
+        fillcolor="#3498db",
+        shape="box",
+        penwidth=3,
+        pencolor="#2c3e50"
+    ];
+    "Add-op0" [
+        label="Add-op0\nMem: 0\nOut: 8192K\nTime: 332",
+        fillcolor="#3498db",
+        shape="box",
+        penwidth=3,
+        pencolor="#2c3e50"
+    ];
+    "Softmax-op0" [
+        label="Softmax-op0\nMem: 0\nOut: 8192K\nTime: 909",
+        fillcolor="#3498db",
+        shape="box",
+        penwidth=3,
+        pencolor="#2c3e50"
+    ];
+    "DropoutDoMask-op0" [
+        label="DropoutDoMask-op0\nMem: 0\nOut: 8192K\nTime: 336",
+        fillcolor="#3498db",
+        shape="box",
+        penwidth=3,
+        pencolor="#2c3e50"
+    ];
+    "BatchMatMul-op1" [
+        label="BatchMatMul-op1\nMem: 0\nOut: 2048K\nTime: 126",
+        fillcolor="#3498db",
+        shape="box",
+        penwidth=3,
+        pencolor="#2c3e50"
+    ];
+    "Transpose-op2" [
+        label="Transpose-op2\nMem: 0\nOut: 2048K\nTime: 728",
+        fillcolor="#3498db",
+        shape="box",
+        penwidth=3,
+        pencolor="#2c3e50"
+    ];
+    "BatchMatMul-op3" [
+        label="BatchMatMul-op3\nMem: 0\nOut: 2048K\nTime: 126",
+        fillcolor="#3498db",
+        shape="box",
+        penwidth=3,
+        pencolor="#2c3e50"
+    ];
+    "Transpose-op3" [
+        label="Transpose-op3\nMem: 0\nOut: 2048K\nTime: 728",
+        fillcolor="#3498db",
+        shape="box",
+        penwidth=3,
+        pencolor="#2c3e50"
+    ];
+    "AddN-op0" [
+        label="AddN-op0\nMem: 0\nOut: 2048K\nTime: 403",
+        fillcolor="#3498db",
+        shape="box",
+        penwidth=3,
+        pencolor="#2c3e50"
+    ];
+    "Transpose-op8" [
+        label="Transpose-op8\nMem: 0\nOut: 2048K\nTime: 728",
+        fillcolor="#3498db",
+        shape="box",
+        penwidth=3,
+        pencolor="#2c3e50"
+    ];
+    "BatchMatMul-op11" [
+        label="BatchMatMul-op11\nMem: 0\nOut: 2048K\nTime: 126",
+        fillcolor="#3498db",
+        shape="box",
+        penwidth=3,
+        pencolor="#2c3e50"
+    ];
+    "Transpose-op11" [
+        label="Transpose-op11\nMem: 0\nOut: 2048K\nTime: 728",
+        fillcolor="#3498db",
+        shape="box",
+        penwidth=3,
+        pencolor="#2c3e50"
+    ];
+    "Return" [
+        label="Return\nMem: 0\nOut: 2048K\nTime: 0",
+        fillcolor="#3498db",
+        shape="box",
+        penwidth=3,
+        pencolor="#2c3e50"
+    ];
+    "Transpose-op4" [
+        label="Transpose-op4\nMem: 0\nOut: 2048K\nTime: 728",
+        fillcolor="#3498db",
+        shape="box",
+        penwidth=3,
+        pencolor="#2c3e50"
+    ];
+    "BatchMatMul-op7" [
+        label="BatchMatMul-op7\nMem: 0\nOut: 2048K\nTime: 126",
+        fillcolor="#3498db",
+        shape="box",
+        penwidth=3,
+        pencolor="#2c3e50"
+    ];
+    "Transpose-op7" [
+        label="Transpose-op7\nMem: 0\nOut: 2048K\nTime: 728",
+        fillcolor="#3498db",
+        shape="box",
+        penwidth=3,
+        pencolor="#2c3e50"
+    ];
+    "SoftmaxBackward-op0" [
+        label="SoftmaxBackward-op0\nMem: 0\nOut: 8192K\nTime: 40",
+        fillcolor="#3498db",
+        shape="box",
+        penwidth=3,
+        pencolor="#2c3e50"
+    ];
+    "BatchMatMul-op2" [
+        label="BatchMatMul-op2\nMem: 0\nOut: 2048K\nTime: 126",
+        fillcolor="#3498db",
+        shape="box",
+        penwidth=3,
+        pencolor="#2c3e50"
+    ];
+    "BatchMatMul-op8" [
+        label="BatchMatMul-op8\nMem: 0\nOut: 8192K\nTime: 505",
+        fillcolor="#3498db",
+        shape="box",
+        penwidth=3,
+        pencolor="#2c3e50"
+    ];
+    "DropoutDoMask-op2" [
+        label="DropoutDoMask-op2\nMem: 0\nOut: 8192K\nTime: 336",
+        fillcolor="#3498db",
+        shape="box",
+        penwidth=3,
+        pencolor="#2c3e50"
+    ];
+    "SoftmaxBackward-op2" [
+        label="SoftmaxBackward-op2\nMem: 0\nOut: 8192K\nTime: 40",
+        fillcolor="#3498db",
+        shape="box",
+        penwidth=3,
+        pencolor="#2c3e50"
+    ];
+    "BatchMatMul-op10" [
+        label="BatchMatMul-op10\nMem: 0\nOut: 2048K\nTime: 126",
+        fillcolor="#3498db",
+        shape="box",
+        penwidth=3,
+        pencolor="#2c3e50"
+    ];
+    "BatchMatMul-op9" [
+        label="BatchMatMul-op9\nMem: 0\nOut: 2048K\nTime: 126",
+        fillcolor="#3498db",
+        shape="box",
+        penwidth=3,
+        pencolor="#2c3e50"
+    ];
+    "RealDiv-op4" [
+        label="RealDiv-op4\nMem: 0\nOut: 2048K\nTime: 183",
+        fillcolor="#3498db",
+        shape="box",
+        penwidth=3,
+        pencolor="#2c3e50"
+    ];
+    "Transpose-op9" [
+        label="Transpose-op9\nMem: 0\nOut: 2048K\nTime: 728",
+        fillcolor="#3498db",
+        shape="box",
+        penwidth=3,
+        pencolor="#2c3e50"
+    ];
+    "RealDiv-op5" [
+        label="RealDiv-op5\nMem: 0\nOut: 2048K\nTime: 183",
+        fillcolor="#3498db",
+        shape="box",
+        penwidth=3,
+        pencolor="#2c3e50"
+    ];
+    "Transpose-op10" [
+        label="Transpose-op10\nMem: 0\nOut: 2048K\nTime: 728",
+        fillcolor="#3498db",
+        shape="box",
+        penwidth=3,
+        pencolor="#2c3e50"
+    ];
+    "BatchMatMul-op4" [
+        label="BatchMatMul-op4\nMem: 0\nOut: 8192K\nTime: 505",
+        fillcolor="#3498db",
+        shape="box",
+        penwidth=3,
+        pencolor="#2c3e50"
+    ];
+    "DropoutDoMask-op1" [
+        label="DropoutDoMask-op1\nMem: 0\nOut: 8192K\nTime: 336",
+        fillcolor="#3498db",
+        shape="box",
+        penwidth=3,
+        pencolor="#2c3e50"
+    ];
+    "SoftmaxBackward-op1" [
+        label="SoftmaxBackward-op1\nMem: 0\nOut: 8192K\nTime: 40",
+        fillcolor="#3498db",
+        shape="box",
+        penwidth=3,
+        pencolor="#2c3e50"
+    ];
+    "BatchMatMul-op5" [
+        label="BatchMatMul-op5\nMem: 0\nOut: 2048K\nTime: 126",
+        fillcolor="#3498db",
+        shape="box",
+        penwidth=3,
+        pencolor="#2c3e50"
+    ];
+    "RealDiv-op2" [
+        label="RealDiv-op2\nMem: 0\nOut: 2048K\nTime: 183",
+        fillcolor="#3498db",
+        shape="box",
+        penwidth=3,
+        pencolor="#2c3e50"
+    ];
+    "Transpose-op5" [
+        label="Transpose-op5\nMem: 0\nOut: 2048K\nTime: 728",
+        fillcolor="#3498db",
+        shape="box",
+        penwidth=3,
+        pencolor="#2c3e50"
+    ];
+    "BatchMatMul-op6" [
+        label="BatchMatMul-op6\nMem: 0\nOut: 2048K\nTime: 126",
+        fillcolor="#3498db",
+        shape="box",
+        penwidth=3,
+        pencolor="#2c3e50"
+    ];
+    "RealDiv-op3" [
+        label="RealDiv-op3\nMem: 0\nOut: 2048K\nTime: 183",
+        fillcolor="#3498db",
+        shape="box",
+        penwidth=3,
+        pencolor="#2c3e50"
+    ];
+    "Transpose-op6" [
+        label="Transpose-op6\nMem: 0\nOut: 2048K\nTime: 728",
+        fillcolor="#3498db",
+        shape="box",
+        penwidth=3,
+        pencolor="#2c3e50"
+    ];
+    "Transpose-op0" -> "RealDiv-op0" [
+        color="#3498db",
+        penwidth=2
+    ];
+    "ExpandDims-op0" -> "Sub-op0" [
+        color="#3498db",
+        penwidth=2
+    ];
+    "Sub-op0" -> "Mul-op0" [
+        color="#3498db",
+        penwidth=2
+    ];
+    "Transpose-op1" -> "RealDiv-op1" [
+        color="#3498db",
+        penwidth=2
+    ];
+    "RealDiv-op0" -> "BatchMatMul-op0" [
+        color="#3498db",
+        penwidth=2
+    ];
+    "RealDiv-op1" -> "BatchMatMul-op0" [
+        color="#3498db",
+        penwidth=2
+    ];
+    "Mul-op0" -> "Add-op0" [
+        color="#3498db",
+        penwidth=2
+    ];
+    "BatchMatMul-op0" -> "Add-op0" [
+        color="#3498db",
+        penwidth=2
+    ];
+    "Add-op0" -> "Softmax-op0" [
+        color="#3498db",
+        penwidth=2
+    ];
+    "Softmax-op0" -> "DropoutDoMask-op0" [
+        color="#3498db",
+        penwidth=2
+    ];
+    "DropoutGenMask-op0" -> "DropoutDoMask-op0" [
+        color="#3498db",
+        penwidth=2
+    ];
+    "DropoutDoMask-op0" -> "BatchMatMul-op1" [
+        color="#3498db",
+        penwidth=2
+    ];
+    "Transpose-op0" -> "BatchMatMul-op1" [
+        color="#3498db",
+        penwidth=2
+    ];
+    "BatchMatMul-op1" -> "Transpose-op2" [
+        color="#3498db",
+        penwidth=2
+    ];
+    "DropoutDoMask-op0" -> "BatchMatMul-op3" [
+        color="#3498db",
+        penwidth=2
+    ];
+    "Transpose-op0" -> "BatchMatMul-op3" [
+        color="#3498db",
+        penwidth=2
+    ];
+    "BatchMatMul-op3" -> "Transpose-op3" [
+        color="#3498db",
+        penwidth=2
+    ];
+    "Transpose-op1" -> "AddN-op0" [
+        color="#3498db",
+        penwidth=2
+    ];
+    "Transpose-op2" -> "AddN-op0" [
+        color="#3498db",
+        penwidth=2
+    ];
+    "Transpose-op3" -> "AddN-op0" [
+        color="#3498db",
+        penwidth=2
+    ];
+    "AddN-op0" -> "Transpose-op8" [
+        color="#3498db",
+        penwidth=2
+    ];
+    "DropoutDoMask-op0" -> "BatchMatMul-op11" [
+        color="#3498db",
+        penwidth=2
+    ];
+    "Transpose-op8" -> "BatchMatMul-op11" [
+        color="#3498db",
+        penwidth=2
+    ];
+    "BatchMatMul-op11" -> "Transpose-op11" [
+        color="#3498db",
+        penwidth=2
+    ];
+    "AddN-op0" -> "Return" [
+        color="#3498db",
+        penwidth=2
+    ];
+    "AddN-op0" -> "Transpose-op4" [
+        color="#3498db",
+        penwidth=2
+    ];
+    "DropoutDoMask-op0" -> "BatchMatMul-op7" [
+        color="#3498db",
+        penwidth=2
+    ];
+    "Transpose-op4" -> "BatchMatMul-op7" [
+        color="#3498db",
+        penwidth=2
+    ];
+    "BatchMatMul-op7" -> "Transpose-op7" [
+        color="#3498db",
+        penwidth=2
+    ];
+    "DropoutDoMask-op0" -> "SoftmaxBackward-op0" [
+        color="#3498db",
+        penwidth=2
+    ];
+    "Softmax-op0" -> "SoftmaxBackward-op0" [
+        color="#3498db",
+        penwidth=2
+    ];
+    "RealDiv-op0" -> "BatchMatMul-op2" [
+        color="#3498db",
+        penwidth=2
+    ];
+    "SoftmaxBackward-op0" -> "BatchMatMul-op2" [
+        color="#3498db",
+        penwidth=2
+    ];
+    "Transpose-op8" -> "BatchMatMul-op8" [
+        color="#3498db",
+        penwidth=2
+    ];
+    "Transpose-op0" -> "BatchMatMul-op8" [
+        color="#3498db",
+        penwidth=2
+    ];
+    "BatchMatMul-op8" -> "DropoutDoMask-op2" [
+        color="#3498db",
+        penwidth=2
+    ];
+    "DropoutDoMask-op2" -> "SoftmaxBackward-op2" [
+        color="#3498db",
+        penwidth=2
+    ];
+    "Softmax-op0" -> "SoftmaxBackward-op2" [
+        color="#3498db",
+        penwidth=2
+    ];
+    "RealDiv-op0" -> "BatchMatMul-op10" [
+        color="#3498db",
+        penwidth=2
+    ];
+    "SoftmaxBackward-op2" -> "BatchMatMul-op10" [
+        color="#3498db",
+        penwidth=2
+    ];
+    "SoftmaxBackward-op2" -> "BatchMatMul-op9" [
+        color="#3498db",
+        penwidth=2
+    ];
+    "RealDiv-op1" -> "BatchMatMul-op9" [
+        color="#3498db",
+        penwidth=2
+    ];
+    "BatchMatMul-op9" -> "RealDiv-op4" [
+        color="#3498db",
+        penwidth=2
+    ];
+    "RealDiv-op4" -> "Transpose-op9" [
+        color="#3498db",
+        penwidth=2
+    ];
+    "BatchMatMul-op10" -> "RealDiv-op5" [
+        color="#3498db",
+        penwidth=2
+    ];
+    "RealDiv-op5" -> "Transpose-op10" [
+        color="#3498db",
+        penwidth=2
+    ];
+    "Transpose-op4" -> "BatchMatMul-op4" [
+        color="#3498db",
+        penwidth=2
+    ];
+    "Transpose-op0" -> "BatchMatMul-op4" [
+        color="#3498db",
+        penwidth=2
+    ];
+    "BatchMatMul-op4" -> "DropoutDoMask-op1" [
+        color="#3498db",
+        penwidth=2
+    ];
+    "DropoutDoMask-op1" -> "SoftmaxBackward-op1" [
+        color="#3498db",
+        penwidth=2
+    ];
+    "Softmax-op0" -> "SoftmaxBackward-op1" [
+        color="#3498db",
+        penwidth=2
+    ];
+    "SoftmaxBackward-op1" -> "BatchMatMul-op5" [
+        color="#3498db",
+        penwidth=2
+    ];
+    "RealDiv-op1" -> "BatchMatMul-op5" [
+        color="#3498db",
+        penwidth=2
+    ];
+    "BatchMatMul-op5" -> "RealDiv-op2" [
+        color="#3498db",
+        penwidth=2
+    ];
+    "RealDiv-op2" -> "Transpose-op5" [
+        color="#3498db",
+        penwidth=2
+    ];
+    "RealDiv-op0" -> "BatchMatMul-op6" [
+        color="#3498db",
+        penwidth=2
+    ];
+    "SoftmaxBackward-op1" -> "BatchMatMul-op6" [
+        color="#3498db",
+        penwidth=2
+    ];
+    "BatchMatMul-op6" -> "RealDiv-op3" [
+        color="#3498db",
+        penwidth=2
+    ];
+    "RealDiv-op3" -> "Transpose-op6" [
+        color="#3498db",
+        penwidth=2
+    ];
+}

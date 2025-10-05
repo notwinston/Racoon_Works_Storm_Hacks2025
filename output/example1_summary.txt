@@ -1,0 +1,61 @@
+=== DAG EXECUTION ORDER SUMMARY ===
+
+EXECUTION SEQUENCE:
+----------------------------------------
+1. DropoutGenMask-op0
+2. Transpose-op1
+3. Transpose-op0
+4. RealDiv-op0
+5. ExpandDims-op0
+6. Sub-op0
+7. Mul-op0
+8. RealDiv-op1
+9. BatchMatMul-op0
+10. Add-op0
+11. Softmax-op0
+12. DropoutDoMask-op0
+13. BatchMatMul-op1
+14. Transpose-op2
+15. BatchMatMul-op3
+16. Transpose-op3
+17. AddN-op0
+18. Transpose-op8
+19. BatchMatMul-op11
+20. Transpose-op11
+21. Return
+22. Transpose-op4
+23. BatchMatMul-op7
+24. Transpose-op7
+25. SoftmaxBackward-op0
+26. BatchMatMul-op2
+27. BatchMatMul-op8
+28. DropoutDoMask-op2
+29. SoftmaxBackward-op2
+30. BatchMatMul-op10
+31. BatchMatMul-op9
+32. RealDiv-op4
+33. Transpose-op9
+34. RealDiv-op5
+35. Transpose-op10
+36. BatchMatMul-op4
+37. DropoutDoMask-op1
+38. SoftmaxBackward-op1
+39. BatchMatMul-op5
+40. RealDiv-op2
+41. Transpose-op5
+42. BatchMatMul-op6
+43. RealDiv-op3
+44. Transpose-op6
+
+
+RECOMPUTATION ANALYSIS:
+----------------------------------------
+
+
+MEMORY ANALYSIS:
+----------------------------------------
+Total Run Memory: 0
+Total Output Memory: 151296K
+Total Execution Time: 17019 units
+Peak Memory: 40960K
+Total Time: 17019 units

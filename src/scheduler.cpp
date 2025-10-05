@@ -1,6 +1,7 @@
 #include "scheduler.hpp"
 #include <chrono>
 #include <iostream>
+#include <algorithm>
 
 // Bring in implementations from the previous reference file
 // Only include what's necessary here

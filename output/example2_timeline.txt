@@ -1,0 +1,57 @@
+=== EXECUTION TIMELINE ===
+
+Step-by-step execution:
+------------------------------------------------------------
+Time    Node           Run Mem     Output Mem  Total Memory   Status
+------------------------------------------------------------
+0       DropoutGenMask-op00           256K        256K           FIRST EXECUTION
+489     Transpose-op1  0           2048K       2304K          FIRST EXECUTION
+1217    Transpose-op0  0           2048K       4352K          FIRST EXECUTION
+1945    RealDiv-op0    0           2048K       6400K          FIRST EXECUTION
+2128    ExpandDims-op0 0           512K        6912K          FIRST EXECUTION
+2187    Sub-op0        0           512K        7424K          FIRST EXECUTION
+2712    Mul-op0        0           512K        7936K          FIRST EXECUTION
+3403    RealDiv-op1    0           2048K       9984K          FIRST EXECUTION
+3586    BatchMatMul-op00           8192K       18176K         FIRST EXECUTION
+4091    Add-op0        0           8192K       26368K         FIRST EXECUTION
+4423    Softmax-op0    0           8192K       34560K         FIRST EXECUTION
+5332    DropoutDoMask-op00           8192K       42752K         FIRST EXECUTION
+5668    BatchMatMul-op10           2048K       44800K         FIRST EXECUTION
+5794    Transpose-op2  0           2048K       46848K         FIRST EXECUTION
+6522    SoftmaxBackward-op00           8192K       55040K         FIRST EXECUTION
+6562    BatchMatMul-op20           2048K       57088K         FIRST EXECUTION
+6688    BatchMatMul-op30           2048K       59136K         FIRST EXECUTION
+6814    Transpose-op3  0           2048K       61184K         FIRST EXECUTION
+7542    AddN-op0       0           2048K       63232K         FIRST EXECUTION
+7945    Transpose-op8  0           2048K       65280K         FIRST EXECUTION
+8673    BatchMatMul-op110           2048K       67328K         FIRST EXECUTION
+8799    Transpose-op11 0           2048K       69376K         FIRST EXECUTION
+9527    BatchMatMul-op80           8192K       77568K         FIRST EXECUTION
+10032   Return         0           2048K       79616K         FIRST EXECUTION
+10032   Transpose-op4  0           2048K       81664K         FIRST EXECUTION
+10760   BatchMatMul-op70           2048K       83712K         FIRST EXECUTION
+10886   Transpose-op7  0           2048K       85760K         FIRST EXECUTION
+11614   DropoutDoMask-op20           8192K       93952K         FIRST EXECUTION
+11950   SoftmaxBackward-op20           8192K       102144K        FIRST EXECUTION
+11990   BatchMatMul-op100           2048K       104192K        FIRST EXECUTION
+12116   BatchMatMul-op90           2048K       106240K        FIRST EXECUTION
+12242   RealDiv-op4    0           2048K       108288K        FIRST EXECUTION
+12425   Transpose-op9  0           2048K       110336K        FIRST EXECUTION
+13153   RealDiv-op5    0           2048K       112384K        FIRST EXECUTION
+13336   Transpose-op10 0           2048K       114432K        FIRST EXECUTION
+14064   BatchMatMul-op40           8192K       122624K        FIRST EXECUTION
+14569   DropoutDoMask-op10           8192K       130816K        FIRST EXECUTION
+14905   SoftmaxBackward-op10           8192K       139008K        FIRST EXECUTION
+14945   BatchMatMul-op50           2048K       141056K        FIRST EXECUTION
+15071   RealDiv-op2    0           2048K       143104K        FIRST EXECUTION
+15254   Transpose-op5  0           2048K       145152K        FIRST EXECUTION
+15982   BatchMatMul-op60           2048K       147200K        FIRST EXECUTION
+16108   RealDiv-op3    0           2048K       149248K        FIRST EXECUTION
+16291   Transpose-op6  0           2048K       151296K        FIRST EXECUTION
+
+
+SUMMARY:
+------------------------------
+Total Execution Time: 17019 units
+Peak Memory Usage: 151296K
+Final Memory Usage: 151296K
