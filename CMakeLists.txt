@@ -59,4 +59,16 @@ elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   target_compile_options(baseline PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 
+# Test parser executable
+add_executable(test_parser
+  src/test_parser.cpp
+  src/parser.cpp
+)
+target_include_directories(test_parser PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR}/src)
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "AppleClang")
+  target_compile_options(test_parser PRIVATE -Wall -Wextra -Wpedantic)
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  target_compile_options(test_parser PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+
 

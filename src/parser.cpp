@@ -1,155 +1,141 @@
 #include "parser.hpp"
+#include <iostream>
 #include <sstream>
-#include <unordered_set>
+#include <algorithm>
 
-static inline std::string trim(const std::string& s) {
-    size_t b = s.find_first_not_of(" \t\r\n");
-    if (b == std::string::npos) return "";
-    size_t e = s.find_last_not_of(" \t\r\n");
-    return s.substr(b, e - b + 1);
-}
+Parser::Parser() : memory_limit_(0) {}
 
-static inline std::vector<std::string> splitCommaList(const std::string& value) {
-    std::vector<std::string> out;
-    std::string token;
-    std::stringstream ss(value);
-    while (std::getline(ss, token, ',')) {
-        token = trim(token);
-        if (!token.empty() && token != "-") out.push_back(token);
+bool Parser::parseFile(const std::string& filename) {
+    std::ifstream file(filename);
+    if (!file.is_open()) {
+        std::cerr << "Error: Could not open file " << filename << std::endl;
+        return false;
     }
-    return out;
-}
-
-bool parseSimpleFormat(std::istream& in, long& total_memory,
-                       std::vector<ParsedNodeSpec>& nodes_out,
-                       std::string& error) {
-    total_memory = -1;
-    nodes_out.clear();
+    
     std::string line;
-    size_t line_no = 0;
-    while (std::getline(in, line)) {
-        ++line_no;
-        std::string raw = trim(line);
-        if (raw.empty() || raw[0] == '#') continue;
-        if (raw.rfind("total_memory:", 0) == 0) {
-            std::string val = trim(raw.substr(std::string("total_memory:").size()));
-            try { total_memory = std::stol(val); } catch (...) {
-                error = "Invalid total_memory on line " + std::to_string(line_no);
-                return false;
-            }
+    int lineNumber = 0;
+    bool firstLine = true;
+    
+    while (std::getline(file, line)) {
+        lineNumber++;
+        
+        // Skip empty lines
+        if (line.empty()) {
             continue;
         }
-        if (raw.rfind("node ", 0) == 0) {
-            std::stringstream ss(raw);
-            std::string kw; ss >> kw; // node
-            ParsedNodeSpec spec{};
-            if (!(ss >> spec.name >> spec.run_mem >> spec.output_mem >> spec.time_cost)) {
-                error = "Invalid node header on line " + std::to_string(line_no);
+        
+        // Parse first line for memory limit
+        if (firstLine) {
+            std::istringstream iss(line);
+            std::string returnKeyword;
+            if (!(iss >> returnKeyword >> memory_limit_)) {
+                std::cerr << "Error: Invalid first line format at line " << lineNumber << std::endl;
                 return false;
             }
-            std::string rest; std::getline(ss, rest); rest = trim(rest);
-            if (!rest.empty()) {
-                auto pos = rest.find("inputs=");
-                if (pos == std::string::npos) { error = "Missing inputs= on line " + std::to_string(line_no); return false; }
-                std::string inputs_str = trim(rest.substr(pos + 7));
-                spec.inputs = splitCommaList(inputs_str);
+            if (returnKeyword != "Return") {
+                std::cerr << "Error: Expected 'Return' keyword at line " << lineNumber << std::endl;
+                return false;
             }
-            nodes_out.push_back(std::move(spec));
+            firstLine = false;
             continue;
         }
-    }
-    if (total_memory < 0) { error = "total_memory not specified"; return false; }
-    if (nodes_out.empty()) { error = "No nodes specified"; return false; }
-    return true;
-}
-
-// Example format: first line is "Return <total_memory>"
-// Each subsequent line: "<id> <name> <num_inputs> [input ids...] <run_mem> <time_cost>"
-// Inputs are listed as numeric ids referring to earlier nodes; names appear like "ExpandDims-op0"
-bool parseExamplesFormat(std::istream& in, long& total_memory,
-                         std::vector<ParsedNodeSpec>& nodes_out,
-                         std::string& error) {
-    total_memory = -1;
-    nodes_out.clear();
-    std::string header;
-    if (!std::getline(in, header)) { error = "Empty file"; return false; }
-    {
-        std::stringstream hs(header);
-        std::string ret;
-        if (!(hs >> ret >> total_memory) || ret != "Return") {
-            error = "Expected 'Return <total_memory>' header";
+        
+        // Parse node lines
+        if (!parseLine(line, lineNumber)) {
             return false;
         }
     }
-
-    // We'll parse once to capture fields, then a second pass to resolve ids to names
-    struct Row {
-        int id{-1};
-        std::string name;
-        int num_inputs{0};
-        std::vector<int> input_ids;
-        long workspace_mem{0};
-        long output_mem{0};
-        long time{0};
-    };
-    std::vector<Row> rows;
-    rows.reserve(1024);
-
-    std::string line;
-    while (std::getline(in, line)) {
-        std::string raw = trim(line);
-        if (raw.empty()) continue;
-        std::stringstream ss(raw);
-        Row r; r.input_ids.clear();
-        if (!(ss >> r.id >> r.name >> r.num_inputs)) continue;
-        for (int i = 0; i < r.num_inputs; ++i) {
-            int iid = -1; if (!(ss >> iid)) { iid = -1; } r.input_ids.push_back(iid);
-        }
-        long ws = 0, outm = 0, t = 0;
-        ss >> ws; ss >> outm; ss >> t;
-        r.workspace_mem = std::max<long>(ws, 0);
-        r.output_mem = std::max<long>(outm, 0);
-        r.time = std::max<long>(t, 0);
-        rows.push_back(std::move(r));
-    }
-
-    // Build id->name map
-    std::unordered_map<int, std::string> id_to_name;
-    id_to_name.reserve(rows.size());
-    for (const auto& r : rows) id_to_name[r.id] = r.name;
-
-    // Emit ParsedNodeSpec using names
-    nodes_out.reserve(rows.size());
-    for (const auto& r : rows) {
-        ParsedNodeSpec spec{};
-        spec.name = r.name;
-        for (int iid : r.input_ids) {
-            auto it = id_to_name.find(iid);
-            if (it != id_to_name.end()) spec.inputs.push_back(it->second);
-        }
-        spec.run_mem = static_cast<int>(r.workspace_mem);
-        spec.output_mem = static_cast<int>(r.output_mem);
-        spec.time_cost = static_cast<int>(r.time);
-        nodes_out.push_back(std::move(spec));
-    }
-
-    if (nodes_out.empty()) { error = "No nodes parsed"; return false; }
+    
+    file.close();
     return true;
 }
 
-Problem buildProblem(long total_memory, const std::vector<ParsedNodeSpec>& specs) {
-    Problem prob; prob.total_memory = total_memory;
-    for (const auto& s : specs) {
-        prob.nodes.emplace(s.name, Node(s.name, s.inputs, s.run_mem, s.output_mem, s.time_cost));
+bool Parser::parseLine(const std::string& line, int lineNumber) {
+    std::istringstream iss(line);
+    std::vector<std::string> tokens;
+    std::string token;
+    
+    // Tokenize the line
+    while (iss >> token) {
+        tokens.push_back(token);
     }
-    for (const auto& s : specs) {
-        for (const auto& input : s.inputs) {
-            prob.dependencies[input].insert(s.name);
-            prob.successors[input].push_back(s.name);
+    
+    if (tokens.size() < 6) {
+        std::cerr << "Error: Invalid line format at line " << lineNumber 
+                  << " (expected at least 6 tokens, got " << tokens.size() << ")" << std::endl;
+        return false;
+    }
+    
+    try {
+        int nodeId = std::stoi(tokens[0]);
+        std::string operationName = tokens[1];
+        int numInputs = std::stoi(tokens[2]);
+        
+        // Validate number of inputs
+        if (numInputs < 0 || numInputs > 10) { // Reasonable upper limit
+            std::cerr << "Error: Invalid number of inputs at line " << lineNumber << std::endl;
+            return false;
         }
-        prob.successors[s.name];
+        
+        // Check if we have enough tokens for the inputs
+        if (tokens.size() < 6 + numInputs) {
+            std::cerr << "Error: Not enough tokens for inputs at line " << lineNumber << std::endl;
+            return false;
+        }
+        
+        // Parse input node IDs
+        std::vector<int> inputIds;
+        for (int i = 0; i < numInputs; i++) {
+            inputIds.push_back(std::stoi(tokens[3 + i]));
+        }
+        
+        // Parse memory and time values
+        int runMem = std::stoi(tokens[3 + numInputs]);
+        int outputMem = std::stoi(tokens[4 + numInputs]);
+        int timeCost = std::stoi(tokens[5 + numInputs]);
+        
+        // Create the node
+        Node node = createNode(operationName, inputIds, runMem, outputMem, timeCost);
+        
+        // Store the node
+        node_map_[nodeId] = node;
+        nodes_.push_back(node);
+        
+    } catch (const std::exception& e) {
+        std::cerr << "Error: Failed to parse line " << lineNumber << ": " << e.what() << std::endl;
+        return false;
     }
-    return prob;
+    
+    return true;
 }
 
+Node Parser::createNode(const std::string& name, 
+                       const std::vector<int>& inputIds,
+                       int runMem, 
+                       int outputMem, 
+                       int timeCost) {
+    // Create input nodes vector
+    std::vector<Node> inputNodes;
+    for (int inputId : inputIds) {
+        // For now, create placeholder nodes for inputs
+        // In a more sophisticated implementation, you might want to reference existing nodes
+        Node inputNode;
+        inputNodes.push_back(inputNode);
+    }
+    
+    return Node(name, inputNodes, runMem, outputMem, timeCost);
+}
 
+void Parser::printParsedData() const {
+    std::cout << "Memory Limit: " << memory_limit_ << std::endl;
+    std::cout << "Number of nodes: " << nodes_.size() << std::endl;
+    std::cout << "\nNodes:" << std::endl;
+    
+    for (size_t i = 0; i < nodes_.size(); i++) {
+        const Node& node = nodes_[i];
+        std::cout << "Node " << i << ": " << node.getName() 
+                  << " (run_mem: " << node.getRunMem() 
+                  << ", output_mem: " << node.getOutputMem() 
+                  << ", time_cost: " << node.getTimeCost() << ")" << std::endl;
+    }
+}

@@ -1,5 +1,0 @@
-total_memory: 350
-node A 50 100 10 inputs=-
-node B 100 100 8 inputs=A
-node C 150 100 5 inputs=A
-node D 80 100 6 inputs=B,C

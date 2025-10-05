@@ -1,26 +1,42 @@
-#pragma once
+#ifndef PARSER_HPP
+#define PARSER_HPP
 
-#include "model.hpp"
 #include <string>
 #include <vector>
-#include <istream>
+#include <map>
+#include <fstream>
+#include "Node.hpp"
 
-struct ParsedNodeSpec {
-    std::string name;
-    int run_mem{0};
-    int output_mem{0};
-    int time_cost{0};
-    std::vector<std::string> inputs;
+class Parser {
+private:
+    int memory_limit_;
+    std::vector<Node> nodes_;
+    std::map<int, Node> node_map_; // Maps node ID to Node object
+
+public:
+    Parser();
+    
+    // Parse input file and populate nodes
+    bool parseFile(const std::string& filename);
+    
+    // Getters
+    int getMemoryLimit() const { return memory_limit_; }
+    const std::vector<Node>& getNodes() const { return nodes_; }
+    const std::map<int, Node>& getNodeMap() const { return node_map_; }
+    
+    // Helper methods
+    void printParsedData() const;
+    
+private:
+    // Helper method to parse a single line
+    bool parseLine(const std::string& line, int lineNumber);
+    
+    // Helper method to create Node from parsed data
+    Node createNode(const std::string& name, 
+                   const std::vector<int>& inputIds,
+                   int runMem, 
+                   int outputMem, 
+                   int timeCost);
 };
 
-bool parseExamplesFormat(std::istream& in, long& total_memory,
-                         std::vector<ParsedNodeSpec>& nodes_out,
-                         std::string& error);
-
-bool parseSimpleFormat(std::istream& in, long& total_memory,
-                       std::vector<ParsedNodeSpec>& nodes_out,
-                       std::string& error);
-
-Problem buildProblem(long total_memory, const std::vector<ParsedNodeSpec>& specs);
-
-
+#endif // PARSER_HPP
