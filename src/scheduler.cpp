@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <map>
 #include <set>
+#include <queue>
 
 // Bring in implementations from the previous reference file
 // Only include what's necessary here
@@ -291,8 +292,6 @@ static void dfsScheduleLimited(const Problem& prob, ScheduleState& current, Sche
     }
 }
 
-
-
 ScheduleState greedySchedule(const Problem& prob) {
     ScheduleState cur;
     // Simple greedy: repeatedly pick any ready node minimizing predicted peak, then time
@@ -314,6 +313,8 @@ ScheduleState greedySchedule(const Problem& prob) {
     }
     return cur;
 }
+
+
 
 // Heuristic schedule: prioritize negative-impact nodes first; otherwise minimize (peak, time)
 ScheduleState heuristicSchedule(const Problem& prob) {
@@ -345,8 +346,9 @@ ScheduleState heuristicSchedule(const Problem& prob) {
 
 // Beam search: keep top-K partial schedules by (validity, time, peak)
 ScheduleState beamSearchSchedule(const Problem& prob, size_t beamWidth, size_t maxExpansions) {
-    if (beamWidth == 0) beamWidth = 32; if (maxExpansions == 0) maxExpansions = 200000;
-    struct Entry { ScheduleState state; bool operator<(const Entry& other) const {
+    if (beamWidth == 0) beamWidth = 32;
+    if (maxExpansions == 0) maxExpansions = 200000;
+    struct Entry { ScheduleState state; bool operator<(const Entry& /*other*/) const {
         // We want a min-heap style comparison; but for vector sort we'll use explicit key
         return false; } };
     std::vector<ScheduleState> beam; beam.reserve(beamWidth);
@@ -397,7 +399,8 @@ ScheduleState beamSearchSchedule(const Problem& prob, size_t beamWidth, size_t m
 
 // DP+Greedy: limited lookahead search selecting the best frontier by (feasible peak, time)
 ScheduleState dpGreedySchedule(const Problem& prob, size_t lookaheadDepth, size_t branchFactor) {
-    if (lookaheadDepth == 0) lookaheadDepth = 2; if (branchFactor == 0) branchFactor = 8;
+    if (lookaheadDepth == 0) lookaheadDepth = 2;
+    if (branchFactor == 0) branchFactor = 8;
     ScheduleState cur;
     while (cur.computed.size() < prob.nodes.size()) {
         auto ready = getReadyNodeNames(prob, cur);
@@ -448,6 +451,143 @@ ScheduleState dpGreedySchedule(const Problem& prob, size_t lookaheadDepth, size_
         }
         cur = executeNode(bestName, prob, cur);
     }
+    return cur;
+}
+
+ScheduleState dfsScheduleLimited(const Problem& prob, size_t maxExpansions, double timeLimitSeconds) {
+    ScheduleState init; ScheduleState best; bool has_best = false;
+    if (maxExpansions == 0) maxExpansions = 200000;
+    if (timeLimitSeconds <= 0.0) timeLimitSeconds = 5.0;
+    auto deadline = std::chrono::steady_clock::now() + std::chrono::duration_cast<std::chrono::steady_clock::duration>(
+        std::chrono::duration<double>(timeLimitSeconds));
+    size_t left = maxExpansions;
+    dfsScheduleLimited(prob, init, best, has_best, left, deadline, nullptr, nullptr);
+    return has_best ? best : ScheduleState{};
+}
+
+// Critical Path Method: Priority based on longest path to completion
+ScheduleState criticalPathSchedule(const Problem& prob) {
+    // Calculate critical path priorities for each node
+    std::unordered_map<std::string, int> criticalPathLength;
+    std::unordered_map<std::string, std::unordered_set<std::string>> dependents;
+    
+    // Build dependency graph (who depends on this node)
+    for (const auto& [name, node] : prob.nodes) {
+        for (const auto& input : node.getInputs()) {
+            if (prob.nodes.count(input)) {
+                dependents[input].insert(name);
+            }
+        }
+    }
+    
+    // Calculate critical path lengths using topological ordering (bottom-up)
+    std::function<int(const std::string&)> calculateCriticalPath = [&](const std::string& name) -> int {
+        if (criticalPathLength.count(name)) return criticalPathLength[name];
+        
+        const Node& node = prob.nodes.at(name);
+        int maxPathFromHere = node.getTimeCost();
+        
+        // Find longest path through dependents
+        for (const auto& dependent : dependents[name]) {
+            maxPathFromHere = std::max(maxPathFromHere, 
+                node.getTimeCost() + calculateCriticalPath(dependent));
+        }
+        
+        return criticalPathLength[name] = maxPathFromHere;
+    };
+    
+    // Calculate critical path for all nodes
+    for (const auto& [name, node] : prob.nodes) {
+        calculateCriticalPath(name);
+    }
+    
+    // Schedule using critical path priorities (longest critical path first)
+    ScheduleState cur;
+    while (cur.computed.size() < prob.nodes.size()) {
+        auto ready = getReadyNodeNames(prob, cur);
+        if (ready.empty()) break;
+        
+        std::string bestName;
+        int bestCriticalPath = -1;
+        int bestPredictedPeak = std::numeric_limits<int>::max();
+        
+        for (const auto& nm : ready) {
+            const Node& node = prob.nodes.at(nm);
+            int predicted_peak = calculateSequentialPeak(cur, node, cur.current_memory);
+            if (predicted_peak > prob.total_memory) continue;
+            
+            int pathLength = criticalPathLength[nm];
+            
+            // Prioritize by critical path length, then by memory efficiency
+            if (pathLength > bestCriticalPath || 
+                (pathLength == bestCriticalPath && predicted_peak < bestPredictedPeak)) {
+                bestCriticalPath = pathLength;
+                bestPredictedPeak = predicted_peak;
+                bestName = nm;
+            }
+        }
+        
+        if (bestName.empty()) break;
+        cur = executeNode(bestName, prob, cur);
+    }
+    
+    return cur;
+}
+
+// TPD-based scheduling: Task Priority Diagram approach from the paper
+ScheduleState tpdBasedSchedule(const Problem& prob) {
+    // Calculate task "effort" - sum of execution times across all machines
+    std::vector<std::pair<std::string, double>> taskEfforts;
+    
+    for (const auto& [name, node] : prob.nodes) {
+        // Estimate average execution time as "effort"
+        double avgTime = node.getTimeCost();
+        taskEfforts.emplace_back(name, avgTime);
+    }
+    
+    // Sort by effort (higher effort = higher priority)
+    std::sort(taskEfforts.begin(), taskEfforts.end(), 
+              [](const auto& a, const auto& b) { return a.second > b.second; });
+    
+    // Schedule tasks in priority order, but only when ready
+    ScheduleState cur;
+    std::set<std::string> priorityOrder;
+    for (const auto& [name, effort] : taskEfforts) {
+        priorityOrder.insert(name);
+    }
+    
+    while (cur.computed.size() < prob.nodes.size()) {
+        auto ready = getReadyNodeNames(prob, cur);
+        if (ready.empty()) break;
+        
+        // Find highest priority ready task
+        std::string bestName;
+        int bestPredictedPeak = std::numeric_limits<int>::max();
+        double bestEffort = -1;
+        
+        for (const auto& nm : ready) {
+            const Node& node = prob.nodes.at(nm);
+            int predicted_peak = calculateSequentialPeak(cur, node, cur.current_memory);
+            if (predicted_peak > prob.total_memory) continue;
+            
+            // Find effort for this task
+            auto it = std::find_if(taskEfforts.begin(), taskEfforts.end(),
+                                   [&nm](const auto& pair) { return pair.first == nm; });
+            double effort = (it != taskEfforts.end()) ? it->second : 0;
+            
+            // Prioritize by effort, then by memory efficiency
+            if (effort > bestEffort || 
+                (effort == bestEffort && predicted_peak < bestPredictedPeak)) {
+                bestEffort = effort;
+                bestPredictedPeak = predicted_peak;
+                bestName = nm;
+            }
+        }
+        
+        if (bestName.empty()) break;
+        cur = executeNode(bestName, prob, cur);
+    }
+    
     return cur;
 }
 

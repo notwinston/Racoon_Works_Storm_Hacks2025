@@ -15,6 +15,9 @@ ScheduleState greedySchedule(const Problem& prob);
 ScheduleState beamSearchSchedule(const Problem& prob, size_t beamWidth, size_t maxExpansions);
 ScheduleState heuristicSchedule(const Problem& prob);
 ScheduleState dpGreedySchedule(const Problem& prob, size_t lookaheadDepth, size_t branchFactor);
+ScheduleState dfsScheduleLimited(const Problem& prob, size_t maxExpansions, double timeLimitSeconds);
+ScheduleState criticalPathSchedule(const Problem& prob);
+ScheduleState tpdBasedSchedule(const Problem& prob);
 
 struct DebugOptions {
     bool verbose{false};     // print high-level choices
