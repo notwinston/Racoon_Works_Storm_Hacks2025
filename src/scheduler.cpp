@@ -4,10 +4,6 @@
 #include <algorithm>
 #include <map>
 #include <set>
-#include <limits>
-#include <vector>
-#include <unordered_set>
-#include <unordered_map>
 
 // Bring in implementations from the previous reference file
 // Only include what's necessary here

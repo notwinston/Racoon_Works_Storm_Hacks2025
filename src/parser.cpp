@@ -153,5 +153,3 @@ Problem buildProblem(long total_memory, const std::vector<ParsedNodeSpec>& specs
     }
     return prob;
 }
-
-
