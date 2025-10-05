@@ -12,5 +12,24 @@ std::unordered_set<std::string> getFreeableInputs(
 ScheduleState schedule(const Problem& prob);
 ScheduleState scheduleWithLimits(const Problem& prob, size_t maxExpansions, double timeLimitSeconds);
 ScheduleState greedySchedule(const Problem& prob);
+ScheduleState beamSearchSchedule(const Problem& prob, size_t beamWidth, size_t maxExpansions);
+ScheduleState heuristicSchedule(const Problem& prob);
+ScheduleState dpGreedySchedule(const Problem& prob, size_t lookaheadDepth, size_t branchFactor);
+ScheduleState hybridMilpSchedule(const Problem& prob, double timeLimitSeconds = 300.0, bool useWarmStart = true);
+ScheduleState hybridMultiStageSchedule(const Problem& prob, double timeLimitSeconds = 300.0);
+
+struct DebugOptions {
+    bool verbose{false};     // print high-level choices
+    bool trace{false};       // print each expansion and ready set
+};
+
+struct DebugStats {
+    size_t expansions{0};
+    size_t prunedByMemory{0};
+    size_t deadEnds{0};
+};
+
+ScheduleState scheduleWithDebug(const Problem& prob, size_t maxExpansions, double timeLimitSeconds,
+                                const DebugOptions& opts, DebugStats& stats);
 
 

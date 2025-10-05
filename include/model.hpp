@@ -33,6 +33,7 @@ public:
 
 struct ScheduleState {
     std::vector<std::string> execution_order;
+    std::vector<bool> recompute_flags; // true if this step is a recomputation of a previously executed node
     int current_memory{0};
     int memory_peak{0};
     int total_time{0};
