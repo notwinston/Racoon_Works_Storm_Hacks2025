@@ -1,6 +1,13 @@
 #include "scheduler.hpp"
 #include <chrono>
 #include <iostream>
+#include <algorithm>
+#include <map>
+#include <set>
+#include <limits>
+#include <vector>
+#include <unordered_set>
+#include <unordered_map>
 
 // Bring in implementations from the previous reference file
 // Only include what's necessary here
@@ -241,12 +248,7 @@ static void dfsSchedule(const Problem& prob, ScheduleState& current, ScheduleSta
     }
 }
 
-ScheduleState schedule(const Problem& prob) {
-    ScheduleState init;
-    ScheduleState best; bool has_best = false;
-    dfsSchedule(prob, init, best, has_best);
-    return best;
-}
+
 
 static void dfsScheduleLimited(const Problem& prob, ScheduleState& current, ScheduleState& best, bool& has_best,
                                size_t& expansionsLeft, const std::chrono::steady_clock::time_point& deadline,
@@ -293,16 +295,7 @@ static void dfsScheduleLimited(const Problem& prob, ScheduleState& current, Sche
     }
 }
 
-ScheduleState scheduleWithLimits(const Problem& prob, size_t maxExpansions, double timeLimitSeconds) {
-    ScheduleState init;
-    ScheduleState best; bool has_best = false;
-    if (maxExpansions == 0) maxExpansions = 100000;
-    if (timeLimitSeconds <= 0.0) timeLimitSeconds = 2.0;
-    auto deadline = std::chrono::steady_clock::now() + std::chrono::duration_cast<std::chrono::steady_clock::duration>(
-        std::chrono::duration<double>(timeLimitSeconds));
-    dfsScheduleLimited(prob, init, best, has_best, maxExpansions, deadline, nullptr, nullptr);
-    return has_best ? best : ScheduleState{};
-}
+
 
 ScheduleState greedySchedule(const Problem& prob) {
     ScheduleState cur;
@@ -465,8 +458,8 @@ ScheduleState dpGreedySchedule(const Problem& prob, size_t lookaheadDepth, size_
 ScheduleState scheduleWithDebug(const Problem& prob, size_t maxExpansions, double timeLimitSeconds,
                                 const DebugOptions& opts, DebugStats& stats) {
     ScheduleState init; ScheduleState best; bool has_best = false;
-    if (maxExpansions == 0) maxExpansions = 100000;
-    if (timeLimitSeconds <= 0.0) timeLimitSeconds = 2.0;
+    if (maxExpansions == 0) maxExpansions = 200000;
+    if (timeLimitSeconds <= 0.0) timeLimitSeconds = 5.0;
     auto deadline = std::chrono::steady_clock::now() + std::chrono::duration_cast<std::chrono::steady_clock::duration>(
         std::chrono::duration<double>(timeLimitSeconds));
     size_t left = maxExpansions;
@@ -479,5 +472,4 @@ ScheduleState scheduleWithDebug(const Problem& prob, size_t maxExpansions, doubl
     }
     return has_best ? best : ScheduleState{};
 }
-
 

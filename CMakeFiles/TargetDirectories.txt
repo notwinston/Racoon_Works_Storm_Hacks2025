@@ -1,0 +1,4 @@
+/mnt/c/Users/tunga/github-classroom/Racoon_Works_Storm_Hacks2025/CMakeFiles/scheduler.dir
+/mnt/c/Users/tunga/github-classroom/Racoon_Works_Storm_Hacks2025/CMakeFiles/baseline.dir
+/mnt/c/Users/tunga/github-classroom/Racoon_Works_Storm_Hacks2025/CMakeFiles/edit_cache.dir
+/mnt/c/Users/tunga/github-classroom/Racoon_Works_Storm_Hacks2025/CMakeFiles/rebuild_cache.dir

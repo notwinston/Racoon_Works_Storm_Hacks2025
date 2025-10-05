@@ -5,7 +5,7 @@
 
 int main(int argc, char** argv) {
     if (argc < 2) {
-        std::cout << "Usage: scheduler <input_file> [--verbose] [--trace] [--max-expansions N] [--time-limit S]\n";
+        std::cout << "Usage: scheduler <input_file>\n";
         return 0;
     }
     std::ifstream fin(argv[1]);
@@ -24,31 +24,24 @@ int main(int argc, char** argv) {
     }
     Problem prob = buildProblem(total_memory, specs);
 
-    // Parse optional flags
-    DebugOptions dbg{}; size_t maxExp = 200000; double tlim = 2.0; size_t beamWidth = 64; size_t dpDepth = 3; size_t dpBranch = 8;
-    for (int i = 2; i < argc; ++i) {
-        std::string a = argv[i];
-        if (a == "--verbose") dbg.verbose = true;
-        else if (a == "--trace") dbg.trace = true;
-        else if (a == "--max-expansions" && i + 1 < argc) { maxExp = std::stoull(argv[++i]); }
-        else if (a == "--time-limit" && i + 1 < argc) { tlim = std::stod(argv[++i]); }
-        else if (a == "--beam-width" && i + 1 < argc) { beamWidth = std::stoull(argv[++i]); }
-        else if (a == "--dp-depth" && i + 1 < argc) { dpDepth = std::stoull(argv[++i]); }
-        else if (a == "--dp-branch" && i + 1 < argc) { dpBranch = std::stoull(argv[++i]); }
-    }
-
+    // Use default algorithm with default parameters
+    DebugOptions dbg{};
     DebugStats stats{};
-    ScheduleState result = scheduleWithDebug(prob, maxExp, tlim, dbg, stats);
+    ScheduleState result = scheduleWithDebug(prob, 200000, 5.0, dbg, stats);
+    
     if (result.execution_order.size() != prob.nodes.size() || result.memory_peak > prob.total_memory) {
         // Fallbacks: heuristic, then dp+greedy, then beam, then greedy
         result = heuristicSchedule(prob);
         if (result.execution_order.size() != prob.nodes.size() || result.memory_peak > prob.total_memory) {
-            result = dpGreedySchedule(prob, dpDepth, dpBranch);
+            std::cout << "Falling back to DP+Greedy schedule\n";
+            result = dpGreedySchedule(prob, 3, 8);
         }
         if (result.execution_order.size() != prob.nodes.size() || result.memory_peak > prob.total_memory) {
-            result = beamSearchSchedule(prob, beamWidth, maxExp);
+            std::cout << "Falling back to Beam Search schedule\n";
+            result = beamSearchSchedule(prob, 64, 200000);
         }
         if (result.execution_order.size() != prob.nodes.size()) {
+            std::cout << "Falling back to Greedy schedule\n";
             result = greedySchedule(prob);
         }
         if (result.execution_order.size() != prob.nodes.size()) {
