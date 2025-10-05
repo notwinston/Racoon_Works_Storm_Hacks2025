@@ -5,7 +5,7 @@
 
 int main(int argc, char** argv) {
     if (argc < 2) {
-        std::cout << "Usage: scheduler <input_file> [--verbose] [--trace] [--max-expansions N] [--time-limit S]\n";
+        std::cout << "Usage: scheduler <input_file> [--verbose] [--trace] [--max-expansions N] [--time-limit S] [--milp] [--hybrid] [--no-warm-start]\n";
         return 0;
     }
     std::ifstream fin(argv[1]);
@@ -26,6 +26,7 @@ int main(int argc, char** argv) {
 
     // Parse optional flags
     DebugOptions dbg{}; size_t maxExp = 200000; double tlim = 2.0; size_t beamWidth = 64; size_t dpDepth = 3; size_t dpBranch = 8;
+    bool useMilp = false; bool warmStart = true; bool useHybrid = false;
     for (int i = 2; i < argc; ++i) {
         std::string a = argv[i];
         if (a == "--verbose") dbg.verbose = true;
@@ -35,10 +36,24 @@ int main(int argc, char** argv) {
         else if (a == "--beam-width" && i + 1 < argc) { beamWidth = std::stoull(argv[++i]); }
         else if (a == "--dp-depth" && i + 1 < argc) { dpDepth = std::stoull(argv[++i]); }
         else if (a == "--dp-branch" && i + 1 < argc) { dpBranch = std::stoull(argv[++i]); }
+        else if (a == "--milp") useMilp = true;
+        else if (a == "--no-warm-start") warmStart = false;
+        else if (a == "--hybrid") useHybrid = true;
     }
 
     DebugStats stats{};
-    ScheduleState result = scheduleWithDebug(prob, maxExp, tlim, dbg, stats);
+    ScheduleState result;
+    
+    if (useHybrid) {
+        std::cout << "Using multi-stage hybrid scheduler" << std::endl;
+        result = hybridMultiStageSchedule(prob, tlim);
+    } else if (useMilp) {
+        std::cout << "Using hybrid MILP scheduler with " << (warmStart ? "warm start" : "cold start") << std::endl;
+        result = hybridMilpSchedule(prob, tlim, warmStart);
+    } else {
+        result = scheduleWithDebug(prob, maxExp, tlim, dbg, stats);
+    }
+    
     if (result.execution_order.size() != prob.nodes.size() || result.memory_peak > prob.total_memory) {
         // Fallbacks: heuristic, then dp+greedy, then beam, then greedy
         result = heuristicSchedule(prob);

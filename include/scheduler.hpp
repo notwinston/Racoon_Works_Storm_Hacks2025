@@ -15,6 +15,8 @@ ScheduleState greedySchedule(const Problem& prob);
 ScheduleState beamSearchSchedule(const Problem& prob, size_t beamWidth, size_t maxExpansions);
 ScheduleState heuristicSchedule(const Problem& prob);
 ScheduleState dpGreedySchedule(const Problem& prob, size_t lookaheadDepth, size_t branchFactor);
+ScheduleState hybridMilpSchedule(const Problem& prob, double timeLimitSeconds = 300.0, bool useWarmStart = true);
+ScheduleState hybridMultiStageSchedule(const Problem& prob, double timeLimitSeconds = 300.0);
 
 struct DebugOptions {
     bool verbose{false};     // print high-level choices
