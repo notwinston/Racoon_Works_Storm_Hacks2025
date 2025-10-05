@@ -113,16 +113,18 @@ bool parseExamplesFormat(std::istream& in, long& total_memory,
         rows.push_back(std::move(r));
     }
 
-    // Build id->name map
+    // Build id->unique_name map for dependency resolution
     std::unordered_map<int, std::string> id_to_name;
     id_to_name.reserve(rows.size());
-    for (const auto& r : rows) id_to_name[r.id] = r.name;
+    for (const auto& r : rows) {
+        id_to_name[r.id] = r.name + "_id" + std::to_string(r.id);
+    }
 
-    // Emit ParsedNodeSpec using names
+    // Emit ParsedNodeSpec using unique names for nodes but original names preserved
     nodes_out.reserve(rows.size());
     for (const auto& r : rows) {
         ParsedNodeSpec spec{};
-        spec.name = r.name;
+        spec.name = r.name + "_id" + std::to_string(r.id);  // Use unique name for this node
         for (int iid : r.input_ids) {
             auto it = id_to_name.find(iid);
             if (it != id_to_name.end()) spec.inputs.push_back(it->second);
@@ -151,5 +153,3 @@ Problem buildProblem(long total_memory, const std::vector<ParsedNodeSpec>& specs
     }
     return prob;
 }
-
-
